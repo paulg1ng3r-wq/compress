@@ -3,562 +3,717 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Video Compressor</title>
+<title>MediaPress</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Cabinet+Grotesk:wght@400;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Mono:ital,wght@0,400;0,600;1,400&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap');
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#070709;--s1:#0f0f14;--s2:#161620;--border:#1e1e2a;
-  --accent:#00e5ff;--accent-dim:rgba(0,229,255,.12);
-  --warn:#ffb800;--ok:#00ff9d;--err:#ff4466;
-  --text:#e8e8f0;--muted:#44445a;--mono:'IBM Plex Mono',monospace;
-  --sans:'Cabinet Grotesk',sans-serif;
+  --bg:#08080b;--s1:#101014;--s2:#18181f;--s3:#202028;
+  --border:#26262f;--border2:#32323d;
+  --accent:#f5c842;--accent-glow:rgba(245,200,66,.15);
+  --green:#3dffa0;--red:#ff4d6d;--blue:#4da6ff;
+  --text:#ececf0;--muted:#52525f;--faint:#2a2a35;
+  --mono:'Instrument Mono',monospace;--sans:'Bricolage Grotesque',sans-serif;
+  --r:12px;
 }
-body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 16px 72px;}
 
-/* header */
-.hd{text-align:center;margin-bottom:44px;}
-.hd h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:900;letter-spacing:-.04em;line-height:1;margin-bottom:8px;}
-.hd h1 em{font-style:normal;color:var(--accent);}
-.hd p{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 16px 80px;}
 
-/* cards */
-.card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:620px;margin-bottom:14px;}
-.card-title{font-family:var(--mono);font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.card-title::before{content:'';display:block;width:6px;height:6px;border-radius:50%;background:var(--accent);}
+/* ── header ── */
+header{text-align:center;margin-bottom:48px;}
+header h1{font-size:clamp(2.4rem,7vw,4rem);font-weight:800;letter-spacing:-.04em;line-height:1;margin-bottom:8px;}
+header h1 .dot{color:var(--accent);}
+header p{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
 
-/* drop zone */
-.drop{border:1px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative;}
-.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-dim);}
+/* ── tabs ── */
+.tabs{display:flex;gap:0;background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:28px;width:100%;max-width:680px;}
+.tab{flex:1;padding:10px;text-align:center;font-weight:700;font-size:.88rem;cursor:pointer;border-radius:7px;transition:background .2s,color .2s;color:var(--muted);}
+.tab.active{background:var(--accent);color:#000;}
+.tab:not(.active):hover{color:var(--text);}
+
+/* ── main layout ── */
+.main{width:100%;max-width:680px;display:flex;flex-direction:column;gap:14px;}
+
+/* ── card ── */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:22px;}
+.card-title{font-family:var(--mono);font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card-title .pip{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+
+/* ── drop zone ── */
+.drop{border:1.5px dashed var(--border2);border-radius:10px;padding:44px 20px;text-align:center;cursor:pointer;position:relative;transition:border-color .2s,background .2s;}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-glow);}
 .drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
-.drop-ico{font-size:2rem;margin-bottom:10px;}
-.drop h3{font-size:1rem;font-weight:800;margin-bottom:4px;}
-.drop small{font-family:var(--mono);color:var(--muted);font-size:.68rem;}
+.drop-ico{font-size:2.2rem;margin-bottom:12px;}
+.drop h3{font-size:1rem;font-weight:700;margin-bottom:5px;}
+.drop small{font-family:var(--mono);font-size:.68rem;color:var(--muted);}
 
-/* file preview */
-.frow{display:none;align-items:center;gap:14px;margin-top:14px;padding:14px;background:var(--s2);border-radius:10px;border:1px solid var(--border);}
-.frow.on{display:flex;}
-.fthumb{width:54px;height:54px;border-radius:8px;background:#1a1a24;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;}
-.fthumb video{width:100%;height:100%;object-fit:cover;border-radius:8px;}
-.fmeta{flex:1;min-width:0;}
-.fname{font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.finfo-line{font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-top:4px;}
-.rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;flex-shrink:0;padding:4px;transition:color .2s;}
-.rm:hover{color:var(--err);}
+/* ── foto: split preview ── */
+.preview-section{display:none;}
+.preview-section.on{display:block;}
 
-/* control rows */
-.ctrl-row{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
-.ctrl-row:last-child{margin-bottom:0;}
-.ctrl-label{font-family:var(--mono);font-size:.68rem;color:var(--muted);min-width:90px;flex-shrink:0;}
-.ctrl-right{flex:1;display:flex;flex-direction:column;gap:6px;}
+.preview-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.preview-filename{font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%;}
+.preview-meta{font-family:var(--mono);font-size:.68rem;color:var(--muted);}
 
-/* slider */
+.split-view{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.split-pane{border-radius:10px;overflow:hidden;background:var(--faint);position:relative;}
+.split-pane img{width:100%;height:200px;object-fit:contain;display:block;background:#000;}
+.split-label{position:absolute;bottom:0;left:0;right:0;padding:5px 10px;font-family:var(--mono);font-size:.62rem;background:rgba(0,0,0,.7);display:flex;justify-content:space-between;align-items:center;}
+.split-label .sz{color:var(--accent);}
+.split-label .dim{color:var(--muted);}
+
+/* ── presets ── */
+.presets-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px;}
+.preset-card{padding:14px 10px;border-radius:10px;border:1.5px solid var(--border);cursor:pointer;text-align:center;transition:all .2s;position:relative;overflow:hidden;}
+.preset-card::before{content:'';position:absolute;inset:0;background:var(--accent-glow);opacity:0;transition:opacity .2s;}
+.preset-card:hover::before,.preset-card.active::before{opacity:1;}
+.preset-card.active{border-color:var(--accent);}
+.preset-name{font-weight:700;font-size:.88rem;margin-bottom:4px;position:relative;}
+.preset-desc{font-family:var(--mono);font-size:.6rem;color:var(--muted);line-height:1.5;position:relative;}
+.preset-badge{display:inline-block;font-family:var(--mono);font-size:.55rem;padding:2px 6px;border-radius:4px;margin-bottom:5px;position:relative;}
+.preset-badge.good{background:rgba(61,255,160,.1);color:var(--green);}
+.preset-badge.warn{background:rgba(255,200,66,.1);color:var(--accent);}
+.preset-badge.small{background:rgba(77,166,255,.1);color:var(--blue);}
+.preset-est{font-family:var(--mono);font-size:.65rem;color:var(--green);margin-top:4px;position:relative;}
+
+/* ── custom controls ── */
+.ctrls{display:flex;flex-direction:column;gap:14px;}
+.ctrl{display:flex;align-items:center;gap:16px;}
+.ctrl-lbl{font-family:var(--mono);font-size:.67rem;color:var(--muted);min-width:80px;flex-shrink:0;}
+.ctrl-body{flex:1;}
 .sl-wrap{display:flex;align-items:center;gap:12px;}
-input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:var(--border);outline:none;cursor:pointer;}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 3px rgba(0,229,255,.15);}
-.sl-num{font-family:var(--mono);font-size:.95rem;font-weight:600;color:var(--accent);min-width:72px;text-align:right;}
-.sl-hint{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.58rem;color:var(--muted);}
-
-/* toggle group */
-.tog-group{display:flex;gap:6px;flex-wrap:wrap;}
-.tog{font-family:var(--mono);font-size:.7rem;padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .18s;}
+input[type=range]{flex:1;-webkit-appearance:none;height:3px;border-radius:2px;background:var(--border2);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 3px var(--accent-glow);}
+.sl-num{font-family:var(--mono);font-size:.92rem;font-weight:600;color:var(--accent);min-width:44px;text-align:right;}
+.sl-hints{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.58rem;color:var(--muted);margin-top:5px;}
+.tog-row{display:flex;gap:6px;flex-wrap:wrap;}
+.tog{font-family:var(--mono);font-size:.68rem;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .18s;}
 .tog:hover{border-color:var(--accent);color:var(--text);}
-.tog.on{border-color:var(--accent);background:var(--accent-dim);color:var(--accent);}
-.tog.disabled-opt{opacity:.35;cursor:not-allowed;}
+.tog.on{border-color:var(--accent);background:var(--accent-glow);color:var(--accent);}
+.num-in{font-family:var(--mono);font-size:.82rem;background:var(--s2);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);width:88px;outline:none;transition:border-color .2s;}
+.num-in:focus{border-color:var(--accent);}
 
-/* custom number input */
-.num-input{font-family:var(--mono);font-size:.85rem;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);width:90px;outline:none;transition:border-color .2s;}
-.num-input:focus{border-color:var(--accent);}
-
-/* divider */
-.divider{height:1px;background:var(--border);margin:6px 0 18px;}
-
-/* status badge */
-.status-row{display:flex;align-items:center;gap:10px;margin-top:14px;}
-.status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
-.status-dot.ok{background:var(--ok);}
-.status-dot.warn{background:var(--warn);}
-.status-text{font-family:var(--mono);font-size:.68rem;color:var(--muted);}
-
-/* go button */
-.go-btn{width:100%;max-width:620px;padding:18px;border-radius:12px;border:none;background:var(--accent);color:#000;font-family:var(--sans);font-weight:900;font-size:1rem;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:transform .15s,box-shadow .15s,opacity .2s;margin-bottom:14px;}
-.go-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,229,255,.25);}
+/* ── go button ── */
+.go-btn{width:100%;padding:17px;border-radius:var(--r);border:none;background:var(--accent);color:#000;font-family:var(--sans);font-weight:800;font-size:.95rem;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:transform .15s,box-shadow .15s,opacity .2s;}
+.go-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 32px rgba(245,200,66,.3);}
 .go-btn:disabled{opacity:.3;cursor:not-allowed;}
 
-/* progress */
-.prog-card{display:none;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:22px 24px;width:100%;max-width:620px;margin-bottom:14px;}
-.prog-card.on{display:block;}
-.prog-title{font-family:var(--mono);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
-.log-box{font-family:var(--mono);font-size:.68rem;color:var(--muted);line-height:1.9;max-height:90px;overflow-y:auto;margin-bottom:14px;word-break:break-all;}
-.bar-bg{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px;}
-.bar-fill{height:100%;background:var(--accent);border-radius:2px;width:0;transition:width .4s;}
-.bar-label{font-family:var(--mono);font-size:.66rem;color:var(--muted);}
+/* ── progress ── */
+.prog-wrap{display:none;}
+.prog-wrap.on{display:block;}
+.prog-bg{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px;}
+.prog-fill{height:100%;background:var(--accent);border-radius:2px;width:0;transition:width .4s;}
+.prog-lbl{font-family:var(--mono);font-size:.67rem;color:var(--muted);}
+.log-box{font-family:var(--mono);font-size:.66rem;color:var(--muted);line-height:1.9;max-height:80px;overflow-y:auto;margin-top:10px;word-break:break-all;}
 
-/* result */
-.result-card{display:none;background:var(--s1);border:1px solid var(--ok);border-radius:14px;padding:24px;width:100%;max-width:620px;margin-bottom:14px;}
+/* ── result ── */
+.result-card{display:none;background:var(--s1);border:1px solid var(--green);border-radius:var(--r);padding:22px;}
 .result-card.on{display:block;}
-.rh{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
-.rh-ico{font-size:1.4rem;}
-.rh-title{font-size:1rem;font-weight:800;color:var(--ok);}
-.compare{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
-.sz-box{flex:1;padding:13px;background:var(--s2);border-radius:8px;border:1px solid var(--border);}
-.sz-lbl{font-family:var(--mono);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;}
-.sz-val{font-size:1.15rem;font-weight:800;}
-.badge{font-family:var(--mono);font-size:.7rem;padding:6px 12px;background:rgba(0,255,157,.07);color:var(--ok);border-radius:6px;border:1px solid rgba(0,255,157,.2);white-space:nowrap;}
-.dl-btn{width:100%;padding:14px;border-radius:10px;border:1px solid var(--ok);background:rgba(0,255,157,.06);color:var(--ok);font-family:var(--sans);font-weight:700;font-size:.9rem;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:.05em;}
-.dl-btn:hover{background:rgba(0,255,157,.12);}
+.result-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.result-title{font-size:1rem;font-weight:800;color:var(--green);}
+.compare-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+.cmp-box{flex:1;padding:12px;background:var(--s2);border-radius:8px;border:1px solid var(--border);}
+.cmp-lbl{font-family:var(--mono);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px;}
+.cmp-val{font-size:1.1rem;font-weight:800;}
+.cmp-sub{font-family:var(--mono);font-size:.6rem;color:var(--muted);margin-top:2px;}
+.cmp-arrow{color:var(--muted);}
+.saving{font-family:var(--mono);font-size:.7rem;padding:5px 11px;border-radius:6px;white-space:nowrap;}
+.saving.better{background:rgba(61,255,160,.08);color:var(--green);border:1px solid rgba(61,255,160,.2);}
+.saving.worse{background:rgba(255,200,66,.08);color:var(--accent);border:1px solid rgba(255,200,66,.2);}
+.dl-btn{width:100%;padding:14px;border-radius:10px;border:1px solid var(--green);background:rgba(61,255,160,.06);color:var(--green);font-family:var(--sans);font-weight:700;font-size:.88rem;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:.05em;}
+.dl-btn:hover{background:rgba(61,255,160,.12);}
 
-/* error */
-.err-msg{display:none;background:rgba(255,68,102,.07);border:1px solid rgba(255,68,102,.25);color:var(--err);border-radius:10px;padding:12px 16px;font-family:var(--mono);font-size:.72rem;margin-top:12px;line-height:1.7;}
-.err-msg.on{display:block;}
+/* ── result split preview ── */
+.result-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.result-split .split-pane img{height:150px;}
 
-.note{font-family:var(--mono);font-size:.63rem;color:var(--muted);text-align:center;max-width:500px;line-height:1.9;margin-top:8px;}
+/* ── error ── */
+.err{display:none;background:rgba(255,77,109,.07);border:1px solid rgba(255,77,109,.25);color:var(--red);border-radius:10px;padding:11px 15px;font-family:var(--mono);font-size:.72rem;margin-top:10px;line-height:1.7;}
+.err.on{display:block;}
 
-/* ffmpeg loading state */
-.ffmpeg-status{font-family:var(--mono);font-size:.68rem;color:var(--muted);text-align:center;padding:6px 0 12px;display:flex;align-items:center;justify-content:center;gap:8px;}
-.spinner{width:10px;height:10px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg)}}
+/* ── video file info bar ── */
+.video-infobar{display:none;align-items:center;gap:14px;padding:13px;background:var(--s2);border-radius:10px;border:1px solid var(--border);margin-bottom:4px;}
+.video-infobar.on{display:flex;}
+.vi-thumb{width:50px;height:50px;border-radius:7px;background:var(--faint);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;}
+.vi-thumb video{width:100%;height:100%;object-fit:cover;border-radius:7px;}
+.vi-meta{flex:1;min-width:0;}
+.vi-name{font-weight:700;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vi-info{font-family:var(--mono);font-size:.67rem;color:var(--muted);margin-top:3px;}
+.vi-rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;flex-shrink:0;transition:color .2s;}
+.vi-rm:hover{color:var(--red);}
+
+.note{font-family:var(--mono);font-size:.62rem;color:var(--muted);text-align:center;max-width:500px;line-height:1.9;margin-top:10px;}
+.hidden{display:none!important;}
 </style>
 </head>
 <body>
 
-<div class="hd">
-  <h1>Video<em>Comp</em></h1>
-  <p>Resolutie · FPS · Bitrate · volledig instelbaar</p>
+<header>
+  <h1>Media<span class="dot">Press</span></h1>
+  <p>Foto's &amp; video's verkleinen · volledig instelbaar</p>
+</header>
+
+<!-- tabs -->
+<div class="tabs">
+  <div class="tab active" id="tabPhoto" onclick="switchTab('photo')">📷 Foto</div>
+  <div class="tab" id="tabVideo" onclick="switchTab('video')">🎬 Video</div>
 </div>
 
-<!-- Upload -->
-<div class="card">
-  <div class="card-title">Bestand</div>
-  <div class="drop" id="drop">
-    <input type="file" id="fileInput" accept="video/*">
-    <div class="drop-ico">🎬</div>
-    <h3>Sleep of klik om een video te laden</h3>
-    <small>MP4 · MOV · WEBM · MKV · AVI · schermopnames</small>
-  </div>
-  <div class="frow" id="frow">
-    <div class="fthumb" id="fthumb"></div>
-    <div class="fmeta">
-      <div class="fname" id="fname">—</div>
-      <div class="finfo-line" id="finfo">—</div>
-    </div>
-    <button class="rm" id="rmBtn">✕</button>
-  </div>
-  <div class="err-msg" id="errMsg"></div>
-</div>
+<div class="main">
 
-<!-- Resolutie -->
-<div class="card">
-  <div class="card-title">Resolutie</div>
-  <div class="ctrl-row">
-    <div class="ctrl-label">Schaling</div>
-    <div class="ctrl-right">
-      <div class="tog-group" id="scaleGroup">
-        <button class="tog on" data-scale="1.0">100%</button>
-        <button class="tog" data-scale="0.75">75%</button>
-        <button class="tog" data-scale="0.5">50%</button>
-        <button class="tog" data-scale="0.25">25%</button>
-        <button class="tog" data-scale="custom">Handmatig</button>
+<!-- ═══════════════════ FOTO SECTIE ═══════════════════ -->
+<div id="photoSection">
+
+  <!-- upload -->
+  <div class="card" id="photoUploadCard">
+    <div class="card-title"><span class="pip"></span>Foto laden</div>
+    <div class="drop" id="photoDrop">
+      <input type="file" id="photoInput" accept="image/*">
+      <div class="drop-ico">🖼️</div>
+      <h3>Sleep of klik om een foto te laden</h3>
+      <small>JPG · PNG · WEBP · GIF · BMP</small>
+    </div>
+    <div class="err" id="photoErr"></div>
+  </div>
+
+  <!-- preview + aanbevelingen -->
+  <div class="preview-section" id="previewSection">
+
+    <!-- split preview origineel vs resultaat -->
+    <div class="card">
+      <div class="card-title"><span class="pip"></span>Voorvertoning</div>
+      <div class="preview-header">
+        <div class="preview-filename" id="photoName">—</div>
+        <button onclick="clearPhoto()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;font-family:var(--mono);">✕ wissen</button>
       </div>
-    </div>
-  </div>
-  <div id="customResRow" style="display:none;" class="ctrl-row">
-    <div class="ctrl-label">Breedte (px)</div>
-    <div class="ctrl-right">
-      <div style="display:flex;gap:10px;align-items:center;">
-        <input type="number" class="num-input" id="customW" placeholder="1280" min="64" max="7680" step="2">
-        <span style="font-family:var(--mono);color:var(--muted);font-size:.75rem;">× hoogte auto</span>
-      </div>
-    </div>
-  </div>
-  <div class="status-row" id="resStatus">
-    <div class="status-dot" id="resDot"></div>
-    <div class="status-text" id="resText">Laad een video om resolutie te zien</div>
-  </div>
-</div>
-
-<!-- FPS -->
-<div class="card">
-  <div class="card-title">Framerate (FPS)</div>
-  <div class="ctrl-row">
-    <div class="ctrl-label">FPS preset</div>
-    <div class="ctrl-right">
-      <div class="tog-group" id="fpsGroup">
-        <button class="tog on" data-fps="original">Origineel</button>
-        <button class="tog" data-fps="60">60 fps</button>
-        <button class="tog" data-fps="30">30 fps</button>
-        <button class="tog" data-fps="24">24 fps</button>
-        <button class="tog" data-fps="15">15 fps</button>
-        <button class="tog" data-fps="custom">Handmatig</button>
-      </div>
-    </div>
-  </div>
-  <div id="customFpsRow" style="display:none;" class="ctrl-row">
-    <div class="ctrl-label">FPS waarde</div>
-    <div class="ctrl-right">
-      <input type="number" class="num-input" id="customFps" placeholder="25" min="1" max="120" step="1">
-    </div>
-  </div>
-</div>
-
-<!-- Bitrate / Kwaliteit -->
-<div class="card">
-  <div class="card-title">Video kwaliteit</div>
-
-  <div class="ctrl-row">
-    <div class="ctrl-label">Modus</div>
-    <div class="ctrl-right">
-      <div class="tog-group" id="qualModeGroup">
-        <button class="tog on" data-mode="crf">CRF (aanbevolen)</button>
-        <button class="tog" data-mode="bitrate">Vaste bitrate</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <!-- CRF mode -->
-  <div id="crfSection">
-    <div class="ctrl-row">
-      <div class="ctrl-label">CRF waarde</div>
-      <div class="ctrl-right">
-        <div class="sl-wrap">
-          <input type="range" id="crfSlider" min="15" max="40" step="1" value="23">
-          <div class="sl-num" id="crfVal">23</div>
+      <div class="split-view">
+        <div class="split-pane">
+          <img id="origImg" src="" alt="Origineel">
+          <div class="split-label">
+            <span>Origineel</span>
+            <span class="sz" id="origSzLabel">—</span>
+            <span class="dim" id="origDimLabel">—</span>
+          </div>
         </div>
-        <div class="sl-hint"><span>← Beste kwaliteit (grotere file)</span><span>Kleinste file →</span></div>
-      </div>
-    </div>
-    <div class="status-row">
-      <div class="status-dot" id="crfDot"></div>
-      <div class="status-text" id="crfText">CRF 23 — standaard H.264, nauwelijks zichtbaar verschil</div>
-    </div>
-  </div>
-
-  <!-- Bitrate mode -->
-  <div id="bitrateSection" style="display:none;">
-    <div class="ctrl-row">
-      <div class="ctrl-label">Video (kbps)</div>
-      <div class="ctrl-right">
-        <div class="sl-wrap">
-          <input type="range" id="vbrSlider" min="200" max="12000" step="100" value="2000">
-          <div class="sl-num" id="vbrVal">2000 kbps</div>
-        </div>
-        <div class="sl-hint"><span>← Lager (kleine file)</span><span>Hoger (betere kwaliteit) →</span></div>
-      </div>
-    </div>
-    <div class="ctrl-row">
-      <div class="ctrl-label">Audio (kbps)</div>
-      <div class="ctrl-right">
-        <div class="tog-group" id="abrGroup">
-          <button class="tog" data-abr="64">64</button>
-          <button class="tog on" data-abr="128">128</button>
-          <button class="tog" data-abr="192">192</button>
-          <button class="tog" data-abr="320">320</button>
+        <div class="split-pane" id="previewPane" style="opacity:.4;">
+          <img id="previewImg" src="" alt="Voorbeeld">
+          <div class="split-label">
+            <span>Voorbeeld</span>
+            <span class="sz" id="previewSzLabel">—</span>
+            <span class="dim" id="previewDimLabel">—</span>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- aanbevelingen -->
+    <div class="card">
+      <div class="card-title"><span class="pip"></span>Aanbevelingen</div>
+      <div class="presets-grid" id="presetsGrid">
+        <!-- dynamisch ingevuld -->
+      </div>
+    </div>
+
+    <!-- handmatige instellingen -->
+    <div class="card">
+      <div class="card-title"><span class="pip"></span>Handmatig aanpassen</div>
+      <div class="ctrls">
+        <div class="ctrl">
+          <div class="ctrl-lbl">Kwaliteit</div>
+          <div class="ctrl-body">
+            <div class="sl-wrap">
+              <input type="range" id="photoQuality" min="10" max="100" step="1" value="82">
+              <div class="sl-num" id="photoQualVal">82%</div>
+            </div>
+            <div class="sl-hints"><span>← Kleiner bestand</span><span>Beste kwaliteit →</span></div>
+          </div>
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-lbl">Breedte (px)</div>
+          <div class="ctrl-body">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="number" class="num-in" id="photoWidth" placeholder="Origineel" min="10" max="10000" step="2">
+              <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted);">hoogte schaalt mee</span>
+            </div>
+          </div>
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-lbl">Formaat</div>
+          <div class="ctrl-body">
+            <div class="tog-row" id="photoFormat">
+              <button class="tog on" data-fmt="image/jpeg">JPEG</button>
+              <button class="tog" data-fmt="image/webp">WEBP</button>
+              <button class="tog" data-fmt="image/png">PNG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="go-btn" id="photoGoBtn">Foto comprimeren &amp; downloaden</button>
+
+    <div class="result-card" id="photoResult">
+      <div class="result-head"><span>✅</span><span class="result-title">Klaar!</span></div>
+      <div class="result-split" id="resultSplit">
+        <div class="split-pane">
+          <img id="resultOrigImg" src="" alt="">
+          <div class="split-label"><span>Origineel</span><span class="sz" id="rOrigSz">—</span></div>
+        </div>
+        <div class="split-pane">
+          <img id="resultNewImg" src="" alt="">
+          <div class="split-label"><span>Gecomprimeerd</span><span class="sz" id="rNewSz">—</span></div>
+        </div>
+      </div>
+      <div class="compare-row">
+        <div class="cmp-box"><div class="cmp-lbl">Origineel</div><div class="cmp-val" id="rOrigFull">—</div><div class="cmp-sub" id="rOrigDim">—</div></div>
+        <span class="cmp-arrow">→</span>
+        <div class="cmp-box"><div class="cmp-lbl">Resultaat</div><div class="cmp-val" id="rNewFull">—</div><div class="cmp-sub" id="rNewDim">—</div></div>
+        <div class="saving" id="rSaving"></div>
+      </div>
+      <button class="dl-btn" id="photoDlBtn">⬇ Download</button>
+    </div>
+
+  </div><!-- /preview-section -->
+</div><!-- /photoSection -->
+
+<!-- ═══════════════════ VIDEO SECTIE ═══════════════════ -->
+<div id="videoSection" class="hidden">
+
+  <div class="card">
+    <div class="card-title"><span class="pip"></span>Video laden</div>
+    <div class="drop" id="videoDrop">
+      <input type="file" id="videoInput" accept="video/*">
+      <div class="drop-ico">🎬</div>
+      <h3>Sleep of klik om een video te laden</h3>
+      <small>MP4 · MOV · WEBM · MKV · AVI</small>
+    </div>
+    <div class="video-infobar" id="videoInfobar">
+      <div class="vi-thumb" id="viThumb"></div>
+      <div class="vi-meta">
+        <div class="vi-name" id="viName">—</div>
+        <div class="vi-info" id="viInfo">—</div>
+      </div>
+      <button class="vi-rm" onclick="clearVideo()">✕</button>
+    </div>
+    <div class="err" id="videoErr"></div>
   </div>
-</div>
 
-<!-- Go -->
-<button class="go-btn" id="goBtn" disabled>▶ Video comprimeren</button>
-
-<!-- Progress -->
-<div class="prog-card" id="progCard">
-  <div class="prog-title">Verwerken met FFmpeg</div>
-  <div class="log-box" id="logBox">Laden...</div>
-  <div class="bar-bg"><div class="bar-fill" id="barFill"></div></div>
-  <div class="bar-label" id="barLabel">0%</div>
-</div>
-
-<!-- Result -->
-<div class="result-card" id="resultCard">
-  <div class="rh"><span class="rh-ico">✅</span><span class="rh-title">Klaar!</span></div>
-  <div class="compare">
-    <div class="sz-box"><div class="sz-lbl">Origineel</div><div class="sz-val" id="origSz">—</div></div>
-    <span style="color:var(--muted);font-size:1.2rem;">→</span>
-    <div class="sz-box"><div class="sz-lbl">Resultaat</div><div class="sz-val" id="newSz">—</div></div>
-    <div class="badge" id="saveBadge"></div>
+  <div class="card" id="videoCtrlCard" style="display:none;">
+    <div class="card-title"><span class="pip"></span>Instellingen</div>
+    <div class="ctrls">
+      <div class="ctrl">
+        <div class="ctrl-lbl">Resolutie</div>
+        <div class="ctrl-body">
+          <div class="tog-row" id="scaleGroup">
+            <button class="tog on" data-scale="1.0">100%</button>
+            <button class="tog" data-scale="0.75">75%</button>
+            <button class="tog" data-scale="0.5">50%</button>
+            <button class="tog" data-scale="custom">Handmatig</button>
+          </div>
+          <div id="customWRow" style="display:none;margin-top:8px;display:none;">
+            <input type="number" class="num-in" id="customW" placeholder="breedte px" min="64" max="7680" step="2">
+          </div>
+        </div>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-lbl">FPS</div>
+        <div class="ctrl-body">
+          <div class="tog-row" id="fpsGroup">
+            <button class="tog on" data-fps="original">Origineel</button>
+            <button class="tog" data-fps="60">60</button>
+            <button class="tog" data-fps="30">30</button>
+            <button class="tog" data-fps="24">24</button>
+            <button class="tog" data-fps="15">15</button>
+            <button class="tog" data-fps="custom">Handmatig</button>
+          </div>
+          <div id="customFpsRow" style="display:none;margin-top:8px;">
+            <input type="number" class="num-in" id="customFps" placeholder="bijv. 25" min="1" max="120">
+          </div>
+        </div>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-lbl">Kwaliteit</div>
+        <div class="ctrl-body">
+          <div class="tog-row" id="qualModeGroup" style="margin-bottom:10px;">
+            <button class="tog on" data-mode="crf">CRF</button>
+            <button class="tog" data-mode="bitrate">Vaste bitrate</button>
+          </div>
+          <div id="crfCtrl">
+            <div class="sl-wrap">
+              <input type="range" id="crfSlider" min="15" max="40" step="1" value="23">
+              <div class="sl-num" id="crfVal">23</div>
+            </div>
+            <div class="sl-hints"><span>← Beste kwaliteit</span><span>Kleinste bestand →</span></div>
+          </div>
+          <div id="bitrateCtrl" style="display:none;">
+            <div class="sl-wrap">
+              <input type="range" id="vbrSlider" min="200" max="12000" step="100" value="2000">
+              <div class="sl-num" id="vbrVal">2000 kbps</div>
+            </div>
+            <div class="sl-hints"><span>← Kleine file</span><span>Hoge kwaliteit →</span></div>
+            <div style="margin-top:10px;">
+              <span style="font-family:var(--mono);font-size:.63rem;color:var(--muted);">Audio bitrate: </span>
+              <div class="tog-row" id="abrGroup" style="margin-top:6px;">
+                <button class="tog" data-abr="64">64k</button>
+                <button class="tog on" data-abr="128">128k</button>
+                <button class="tog" data-abr="192">192k</button>
+                <button class="tog" data-abr="320">320k</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  <button class="dl-btn" id="dlBtn">⬇ Download MP4</button>
-</div>
 
-<p class="note">Alles wordt lokaal verwerkt via FFmpeg WebAssembly — er wordt niets geüpload.</p>
+  <button class="go-btn hidden" id="videoGoBtn">▶ Video comprimeren</button>
+
+  <div class="card" id="videoProgCard" style="display:none;">
+    <div class="card-title"><span class="pip"></span>Verwerken via FFmpeg</div>
+    <div class="prog-wrap on">
+      <div class="prog-bg"><div class="prog-fill" id="videoProg"></div></div>
+      <div class="prog-lbl" id="videoProgLbl">Laden...</div>
+      <div class="log-box" id="videoLog"></div>
+    </div>
+  </div>
+
+  <div class="result-card" id="videoResult">
+    <div class="result-head"><span>✅</span><span class="result-title">Klaar!</span></div>
+    <div class="compare-row">
+      <div class="cmp-box"><div class="cmp-lbl">Origineel</div><div class="cmp-val" id="vOrigSz">—</div><div class="cmp-sub" id="vOrigInfo">—</div></div>
+      <span class="cmp-arrow">→</span>
+      <div class="cmp-box"><div class="cmp-lbl">Resultaat</div><div class="cmp-val" id="vNewSz">—</div><div class="cmp-sub" id="vNewInfo">—</div></div>
+      <div class="saving" id="vSaving"></div>
+    </div>
+    <button class="dl-btn" id="videoDlBtn">⬇ Download MP4</button>
+  </div>
+
+</div><!-- /videoSection -->
+
+</div><!-- /main -->
+
+<p class="note">Alles verwerkt lokaal in je browser — er wordt niets geüpload.</p>
 
 <script type="module">
-import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
-import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
+// ──────────────────────────────────────────────
+// HELPERS
+// ──────────────────────────────────────────────
+function fmt(b){const m=b/1048576;return m>=0.1?m.toFixed(2)+' MB':(b/1024).toFixed(0)+' KB';}
+function el(id){return document.getElementById(id);}
+function tog(groupId, activeBtn){
+  document.querySelectorAll(`#${groupId} .tog`).forEach(b=>b.classList.remove('on'));
+  activeBtn.classList.add('on');
+}
 
-// ── state ──────────────────────────────────────────────────────
-let ffmpeg = null, ffmpegReady = false;
-let currentFile = null, videoDuration = 0;
-let selectedScale = '1.0', selectedFps = 'original', qualMode = 'crf', selectedAbr = '128';
-let resultBlob = null;
+// ──────────────────────────────────────────────
+// TAB SWITCH
+// ──────────────────────────────────────────────
+window.switchTab = (tab) => {
+  el('photoSection').classList.toggle('hidden', tab!=='photo');
+  el('videoSection').classList.toggle('hidden', tab!=='video');
+  el('tabPhoto').classList.toggle('active', tab==='photo');
+  el('tabVideo').classList.toggle('active', tab==='video');
+};
 
-// ── element refs ───────────────────────────────────────────────
-const drop = document.getElementById('drop');
-const fileInput = document.getElementById('fileInput');
-const frow = document.getElementById('frow');
-const fthumb = document.getElementById('fthumb');
-const fname = document.getElementById('fname');
-const finfo = document.getElementById('finfo');
-const rmBtn = document.getElementById('rmBtn');
-const errMsg = document.getElementById('errMsg');
-const resText = document.getElementById('resText');
-const resDot = document.getElementById('resDot');
-const crfSlider = document.getElementById('crfSlider');
-const crfVal = document.getElementById('crfVal');
-const crfDot = document.getElementById('crfDot');
-const crfText = document.getElementById('crfText');
-const vbrSlider = document.getElementById('vbrSlider');
-const vbrVal = document.getElementById('vbrVal');
-const goBtn = document.getElementById('goBtn');
-const progCard = document.getElementById('progCard');
-const logBox = document.getElementById('logBox');
-const barFill = document.getElementById('barFill');
-const barLabel = document.getElementById('barLabel');
-const resultCard = document.getElementById('resultCard');
-const origSz = document.getElementById('origSz');
-const newSz = document.getElementById('newSz');
-const saveBadge = document.getElementById('saveBadge');
-const dlBtn = document.getElementById('dlBtn');
-const customResRow = document.getElementById('customResRow');
-const customFpsRow = document.getElementById('customFpsRow');
-const crfSection = document.getElementById('crfSection');
-const bitrateSection = document.getElementById('bitrateSection');
+// ──────────────────────────────────────────────
+// FOTO
+// ──────────────────────────────────────────────
+let photoFile=null, photoImg=null, photoOrigW=0, photoOrigH=0;
+let selectedFmt='image/jpeg', previewDebounce=null;
+let resultPhotoBlob=null;
 
-// ── FFmpeg init ────────────────────────────────────────────────
-async function initFFmpeg() {
-  ffmpeg = new FFmpeg();
-  ffmpeg.on('log', ({ message }) => appendLog(message));
-  ffmpeg.on('progress', ({ progress, time }) => {
-    const pct = Math.min(99, Math.round(progress * 100));
-    barFill.style.width = pct + '%';
-    barLabel.textContent = pct + '% ' + (videoDuration > 0 ? `(${(time/1000000).toFixed(1)}s / ${videoDuration.toFixed(1)}s)` : '');
+const photoDrop=el('photoDrop'), photoInput=el('photoInput');
+photoDrop.addEventListener('dragover',e=>{e.preventDefault();photoDrop.classList.add('over');});
+photoDrop.addEventListener('dragleave',()=>photoDrop.classList.remove('over'));
+photoDrop.addEventListener('drop',e=>{e.preventDefault();photoDrop.classList.remove('over');if(e.dataTransfer.files[0])loadPhoto(e.dataTransfer.files[0]);});
+photoInput.addEventListener('change',()=>{if(photoInput.files[0])loadPhoto(photoInput.files[0]);});
+
+async function loadPhoto(file){
+  photoFile=file;
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url;});
+  photoImg=img; photoOrigW=img.naturalWidth; photoOrigH=img.naturalHeight;
+
+  el('origImg').src=url;
+  el('photoName').textContent=file.name;
+  el('origSzLabel').textContent=fmt(file.size);
+  el('origDimLabel').textContent=`${photoOrigW}×${photoOrigH}`;
+  el('resultOrigImg').src=url;
+
+  // reset width input to original
+  el('photoWidth').placeholder=photoOrigW;
+  el('photoWidth').value='';
+
+  el('previewSection').classList.add('on');
+  el('photoResult').classList.remove('on');
+  buildPresets();
+  schedulePreview();
+}
+
+window.clearPhoto=()=>{
+  photoFile=null; el('previewSection').classList.remove('on');
+  el('origImg').src=''; el('photoInput').value='';
+};
+
+// presets
+function buildPresets(){
+  const sizeMB=photoFile.size/1048576;
+  const presets=[
+    {name:'Web',badge:'good',badgeText:'Aanbevolen',desc:'Goed voor websites & email',quality:82,scaleW:Math.min(photoOrigW,1920)},
+    {name:'Social',badge:'good',badgeText:'Aanbevolen',desc:'WhatsApp, Instagram etc.',quality:78,scaleW:Math.min(photoOrigW,1080)},
+    {name:'Klein',badge:'small',badgeText:'Kleinste',desc:'Maximale compressie',quality:60,scaleW:Math.min(photoOrigW,800)},
+    {name:'Print',badge:'warn',badgeText:'Groot',desc:'Hoge kwaliteit voor print',quality:95,scaleW:photoOrigW},
+    {name:'Origineel -50%',badge:'warn',badgeText:'Licht',desc:'Halve bestandsgrootte',quality:75,scaleW:Math.round(photoOrigW*.75)},
+    {name:'Micro',badge:'small',badgeText:'Kleinste',desc:'Thumbnail, icoon etc.',quality:55,scaleW:Math.min(photoOrigW,480)},
+  ];
+  const grid=el('presetsGrid'); grid.innerHTML='';
+  presets.forEach((p,i)=>{
+    const estW=p.scaleW, estH=Math.round(photoOrigH*(estW/photoOrigW));
+    const div=document.createElement('div');
+    div.className='preset-card'+(i===0?' active':'');
+    div.innerHTML=`<div class="preset-badge ${p.badge}">${p.badgeText}</div><div class="preset-name">${p.name}</div><div class="preset-desc">${p.desc}</div><div class="preset-est">${estW}×${estH}</div>`;
+    div.addEventListener('click',()=>{
+      document.querySelectorAll('.preset-card').forEach(c=>c.classList.remove('active'));
+      div.classList.add('active');
+      el('photoQuality').value=p.quality; el('photoQualVal').textContent=p.quality+'%';
+      el('photoWidth').value=p.scaleW===photoOrigW?'':p.scaleW;
+      schedulePreview();
+    });
+    grid.appendChild(div);
   });
-  const base = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
-  await ffmpeg.load({
-    coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
-  });
-  ffmpegReady = true;
-  if (currentFile) goBtn.disabled = false;
+  // apply first preset
+  el('photoQuality').value=presets[0].quality; el('photoQualVal').textContent=presets[0].quality+'%';
+  el('photoWidth').value=presets[0].scaleW===photoOrigW?'':presets[0].scaleW;
 }
 
-function appendLog(msg) {
-  const line = document.createElement('div');
-  line.textContent = msg;
-  logBox.appendChild(line);
-  logBox.scrollTop = logBox.scrollHeight;
+// live preview
+function schedulePreview(){
+  clearTimeout(previewDebounce);
+  previewDebounce=setTimeout(renderPreview,300);
 }
 
-initFFmpeg().catch(e => showErr('FFmpeg kon niet laden: ' + e.message));
-
-// ── drop / file ────────────────────────────────────────────────
-drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
-drop.addEventListener('dragleave', () => drop.classList.remove('over'));
-drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
-fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
-rmBtn.addEventListener('click', clearFile);
-
-function fmt(bytes) {
-  const mb = bytes / 1048576;
-  return mb >= 0.1 ? mb.toFixed(2) + ' MB' : (bytes / 1024).toFixed(0) + ' KB';
+async function renderPreview(){
+  if(!photoFile||!photoImg) return;
+  const q=parseInt(el('photoQuality').value)/100;
+  const wInput=parseInt(el('photoWidth').value);
+  const tw=wInput&&wInput>0?wInput:photoOrigW;
+  const th=Math.round(photoOrigH*(tw/photoOrigW));
+  const canvas=document.createElement('canvas');
+  canvas.width=tw; canvas.height=th;
+  canvas.getContext('2d').drawImage(photoImg,0,0,tw,th);
+  const blob=await new Promise(res=>canvas.toBlob(res,selectedFmt,q));
+  const url=URL.createObjectURL(blob);
+  el('previewImg').src=url;
+  el('previewPane').style.opacity='1';
+  el('previewSzLabel').textContent=fmt(blob.size);
+  el('previewDimLabel').textContent=`${tw}×${th}`;
 }
 
-function loadFile(file) {
-  currentFile = file;
-  fthumb.innerHTML = '';
-  const vid = document.createElement('video');
-  vid.src = URL.createObjectURL(file);
-  vid.muted = true;
-  vid.preload = 'metadata';
-  fthumb.appendChild(vid);
-  vid.onloadedmetadata = () => {
-    videoDuration = vid.duration;
-    const w = vid.videoWidth, h = vid.videoHeight;
-    finfo.textContent = `${fmt(file.size)} · ${w}×${h} · ${vid.duration.toFixed(1)}s`;
-    updateResStatus(w, h);
-  };
-  fname.textContent = file.name;
-  frow.classList.add('on');
-  resultCard.classList.remove('on');
-  errMsg.classList.remove('on');
-  if (ffmpegReady) goBtn.disabled = false;
-}
+el('photoQuality').addEventListener('input',()=>{
+  el('photoQualVal').textContent=el('photoQuality').value+'%';
+  schedulePreview();
+});
+el('photoWidth').addEventListener('input',schedulePreview);
 
-function clearFile() {
-  currentFile = null; frow.classList.remove('on');
-  fthumb.innerHTML = ''; fname.textContent = '—'; finfo.textContent = '—';
-  goBtn.disabled = true; fileInput.value = '';
-  resultCard.classList.remove('on'); errMsg.classList.remove('on');
-  resText.textContent = 'Laad een video om resolutie te zien'; resDot.className = 'status-dot';
-}
-
-// ── resolution toggles ─────────────────────────────────────────
-document.getElementById('scaleGroup').addEventListener('click', e => {
-  const btn = e.target.closest('.tog'); if (!btn) return;
-  document.querySelectorAll('#scaleGroup .tog').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  selectedScale = btn.dataset.scale;
-  customResRow.style.display = selectedScale === 'custom' ? 'flex' : 'none';
-  if (currentFile) {
-    const vid = fthumb.querySelector('video');
-    if (vid && vid.videoWidth) updateResStatus(vid.videoWidth, vid.videoHeight);
-  }
+document.getElementById('photoFormat').addEventListener('click',e=>{
+  const btn=e.target.closest('.tog');if(!btn)return;
+  tog('photoFormat',btn); selectedFmt=btn.dataset.fmt; schedulePreview();
 });
 
-function updateResStatus(w, h) {
-  let tw, th;
-  if (selectedScale === 'custom') {
-    const cw = parseInt(document.getElementById('customW').value);
-    if (cw) { tw = cw; th = Math.round(h * (cw / w) / 2) * 2; }
-    else { resText.textContent = 'Vul een breedte in'; resDot.className = 'status-dot warn'; return; }
-  } else {
-    const s = parseFloat(selectedScale);
-    tw = Math.round(w * s / 2) * 2; th = Math.round(h * s / 2) * 2;
-  }
-  resText.textContent = `${w}×${h} → ${tw}×${th}`;
-  resDot.className = 'status-dot ' + (tw === w ? '' : 'ok');
-}
-
-document.getElementById('customW').addEventListener('input', () => {
-  if (currentFile) { const v = fthumb.querySelector('video'); if (v && v.videoWidth) updateResStatus(v.videoWidth, v.videoHeight); }
+// convert + download
+el('photoGoBtn').addEventListener('click',async()=>{
+  if(!photoFile||!photoImg) return;
+  const q=parseInt(el('photoQuality').value)/100;
+  const wInput=parseInt(el('photoWidth').value);
+  const tw=wInput&&wInput>0?wInput:photoOrigW;
+  const th=Math.round(photoOrigH*(tw/photoOrigW));
+  const canvas=document.createElement('canvas');
+  canvas.width=tw; canvas.height=th;
+  canvas.getContext('2d').drawImage(photoImg,0,0,tw,th);
+  const blob=await new Promise(res=>canvas.toBlob(res,selectedFmt,q));
+  resultPhotoBlob=blob;
+  const url=URL.createObjectURL(blob);
+  el('resultNewImg').src=url;
+  el('rOrigSz').textContent=fmt(photoFile.size);
+  el('rNewSz').textContent=fmt(blob.size);
+  el('rOrigFull').textContent=fmt(photoFile.size);
+  el('rNewFull').textContent=fmt(blob.size);
+  el('rOrigDim').textContent=`${photoOrigW}×${photoOrigH}`;
+  el('rNewDim').textContent=`${tw}×${th}`;
+  const pct=((blob.size-photoFile.size)/photoFile.size*100);
+  const sav=el('rSaving');
+  sav.textContent=pct<0?`↓ ${Math.abs(pct).toFixed(0)}% kleiner`:`↑ ${pct.toFixed(0)}% groter`;
+  sav.className='saving '+(pct<0?'better':'worse');
+  el('photoResult').classList.add('on');
+  el('photoResult').scrollIntoView({behavior:'smooth',block:'nearest'});
 });
 
-// ── FPS toggles ────────────────────────────────────────────────
-document.getElementById('fpsGroup').addEventListener('click', e => {
-  const btn = e.target.closest('.tog'); if (!btn) return;
-  document.querySelectorAll('#fpsGroup .tog').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  selectedFps = btn.dataset.fps;
-  customFpsRow.style.display = selectedFps === 'custom' ? 'flex' : 'none';
-});
-
-// ── quality mode ───────────────────────────────────────────────
-document.getElementById('qualModeGroup').addEventListener('click', e => {
-  const btn = e.target.closest('.tog'); if (!btn) return;
-  document.querySelectorAll('#qualModeGroup .tog').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  qualMode = btn.dataset.mode;
-  crfSection.style.display = qualMode === 'crf' ? 'block' : 'none';
-  bitrateSection.style.display = qualMode === 'bitrate' ? 'block' : 'none';
-});
-
-// ── CRF slider ─────────────────────────────────────────────────
-crfSlider.addEventListener('input', () => {
-  const v = parseInt(crfSlider.value); crfVal.textContent = v;
-  if (v <= 20) { crfDot.className = 'status-dot ok'; crfText.textContent = `CRF ${v} — hoge kwaliteit, grotere file`; }
-  else if (v <= 26) { crfDot.className = 'status-dot ok'; crfText.textContent = `CRF ${v} — goed evenwicht, nauwelijks zichtbaar verschil`; }
-  else if (v <= 32) { crfDot.className = 'status-dot warn'; crfText.textContent = `CRF ${v} — lichte compressie zichtbaar, kleine file`; }
-  else { crfDot.className = 'status-dot'; crfText.textContent = `CRF ${v} — sterke compressie, duidelijk zichtbaar`; }
-});
-
-// ── VBR slider ─────────────────────────────────────────────────
-vbrSlider.addEventListener('input', () => { vbrVal.textContent = parseInt(vbrSlider.value) + ' kbps'; });
-
-// ── audio bitrate ──────────────────────────────────────────────
-document.getElementById('abrGroup').addEventListener('click', e => {
-  const btn = e.target.closest('.tog'); if (!btn) return;
-  document.querySelectorAll('#abrGroup .tog').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on'); selectedAbr = btn.dataset.abr;
-});
-
-// ── convert ────────────────────────────────────────────────────
-goBtn.addEventListener('click', async () => {
-  if (!currentFile || !ffmpegReady) return;
-  errMsg.classList.remove('on');
-  resultCard.classList.remove('on');
-  progCard.classList.add('on');
-  logBox.innerHTML = '';
-  barFill.style.width = '0%'; barLabel.textContent = '0%';
-  goBtn.disabled = true;
-
-  try {
-    const inName = 'input.' + (currentFile.name.split('.').pop() || 'mp4');
-    const outName = 'output.mp4';
-
-    appendLog('Bestand inladen...');
-    await ffmpeg.writeFile(inName, await fetchFile(currentFile));
-
-    // build ffmpeg args
-    const args = ['-i', inName];
-
-    // scale
-    let scaleFilter = '';
-    const vid = fthumb.querySelector('video');
-    const origW = vid ? vid.videoWidth : 0;
-    const origH = vid ? vid.videoHeight : 0;
-
-    if (selectedScale === 'custom') {
-      const cw = parseInt(document.getElementById('customW').value);
-      if (cw) scaleFilter = `scale=${cw}:-2`;
-    } else {
-      const s = parseFloat(selectedScale);
-      if (s !== 1.0 && origW) {
-        const tw = Math.round(origW * s / 2) * 2;
-        scaleFilter = `scale=${tw}:-2`;
-      }
-    }
-
-    if (scaleFilter) args.push('-vf', scaleFilter);
-
-    // fps
-    if (selectedFps === 'custom') {
-      const cf = parseInt(document.getElementById('customFps').value);
-      if (cf) args.push('-r', cf.toString());
-    } else if (selectedFps !== 'original') {
-      args.push('-r', selectedFps);
-    }
-
-    // quality
-    if (qualMode === 'crf') {
-      args.push('-c:v', 'libx264', '-crf', crfSlider.value, '-preset', 'fast');
-    } else {
-      args.push('-c:v', 'libx264', '-b:v', vbrSlider.value + 'k', '-preset', 'fast');
-    }
-
-    // audio
-    args.push('-c:a', 'aac', '-b:a', selectedAbr + 'k');
-    args.push('-movflags', '+faststart');
-    args.push(outName);
-
-    appendLog('FFmpeg args: ' + args.join(' '));
-    appendLog('Verwerken...');
-
-    await ffmpeg.exec(args);
-
-    barFill.style.width = '100%'; barLabel.textContent = '100%';
-    appendLog('Klaar!');
-
-    const data = await ffmpeg.readFile(outName);
-    resultBlob = new Blob([data.buffer], { type: 'video/mp4' });
-
-    origSz.textContent = fmt(currentFile.size);
-    newSz.textContent = fmt(resultBlob.size);
-    const pct = ((resultBlob.size - currentFile.size) / currentFile.size * 100);
-    saveBadge.textContent = pct < 0 ? `↓ ${Math.abs(pct).toFixed(0)}% kleiner` : `↑ ${pct.toFixed(0)}% groter`;
-    saveBadge.style.color = pct < 0 ? 'var(--ok)' : 'var(--warn)';
-
-    resultCard.classList.add('on');
-    progCard.classList.remove('on');
-  } catch(e) {
-    showErr('Fout: ' + e.message);
-    progCard.classList.remove('on');
-  }
-  goBtn.disabled = false;
-});
-
-dlBtn.addEventListener('click', () => {
-  if (!resultBlob) return;
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(resultBlob);
-  a.download = (currentFile?.name.replace(/\.[^.]+$/, '') || 'video') + '_compressed.mp4';
+el('photoDlBtn').addEventListener('click',()=>{
+  if(!resultPhotoBlob)return;
+  const ext=selectedFmt.split('/')[1].replace('jpeg','jpg');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(resultPhotoBlob);
+  a.download=(photoFile.name.replace(/\.[^.]+$/,'')||'foto')+'_compressed.'+ext;
   a.click();
 });
 
-function showErr(msg) { errMsg.textContent = msg; errMsg.classList.add('on'); goBtn.disabled = false; }
+// ──────────────────────────────────────────────
+// VIDEO — FFmpeg WASM
+// ──────────────────────────────────────────────
+import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
+import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
+
+let ffmpeg=null, ffmpegReady=false, videoFile=null, videoDuration=0;
+let vScale='1.0', vFps='original', vQualMode='crf', vAbr='128';
+let videoResultBlob=null;
+
+async function initFFmpeg(){
+  ffmpeg=new FFmpeg();
+  ffmpeg.on('log',({message})=>appendVideoLog(message));
+  ffmpeg.on('progress',({progress,time})=>{
+    const pct=Math.min(99,Math.round(progress*100));
+    el('videoProg').style.width=pct+'%';
+    el('videoProgLbl').textContent=pct+'%'+(videoDuration>0?` (${(time/1000000).toFixed(1)}s / ${videoDuration.toFixed(1)}s)`:'');
+  });
+  const base='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+  await ffmpeg.load({
+    coreURL:await toBlobURL(`${base}/ffmpeg-core.js`,'text/javascript'),
+    wasmURL:await toBlobURL(`${base}/ffmpeg-core.wasm`,'application/wasm'),
+  });
+  ffmpegReady=true;
+  if(videoFile) el('videoGoBtn').classList.remove('hidden');
+}
+
+function appendVideoLog(msg){
+  const d=document.createElement('div');d.textContent=msg;
+  el('videoLog').appendChild(d);el('videoLog').scrollTop=el('videoLog').scrollHeight;
+}
+
+initFFmpeg().catch(e=>console.error('FFmpeg load error:',e));
+
+const videoDrop=el('videoDrop'),videoInput=el('videoInput');
+videoDrop.addEventListener('dragover',e=>{e.preventDefault();videoDrop.classList.add('over');});
+videoDrop.addEventListener('dragleave',()=>videoDrop.classList.remove('over'));
+videoDrop.addEventListener('drop',e=>{e.preventDefault();videoDrop.classList.remove('over');if(e.dataTransfer.files[0])loadVideo(e.dataTransfer.files[0]);});
+videoInput.addEventListener('change',()=>{if(videoInput.files[0])loadVideo(videoInput.files[0]);});
+
+function loadVideo(file){
+  videoFile=file;
+  el('viName').textContent=file.name;
+  const vid=document.createElement('video');
+  vid.src=URL.createObjectURL(file);vid.muted=true;vid.preload='metadata';
+  el('viThumb').innerHTML='';el('viThumb').appendChild(vid);
+  vid.onloadedmetadata=()=>{
+    videoDuration=vid.duration;
+    el('viInfo').textContent=`${fmt(file.size)} · ${vid.videoWidth}×${vid.videoHeight} · ${vid.duration.toFixed(1)}s`;
+  };
+  el('videoInfobar').classList.add('on');
+  el('videoCtrlCard').style.display='block';
+  el('videoResult').classList.remove('on');
+  if(ffmpegReady) el('videoGoBtn').classList.remove('hidden');
+}
+
+window.clearVideo=()=>{
+  videoFile=null;el('videoInfobar').classList.remove('on');
+  el('videoCtrlCard').style.display='none';el('videoGoBtn').classList.add('hidden');
+  el('videoResult').classList.remove('on');el('videoInput').value='';
+};
+
+// toggle handlers
+el('scaleGroup').addEventListener('click',e=>{
+  const b=e.target.closest('.tog');if(!b)return;
+  tog('scaleGroup',b);vScale=b.dataset.scale;
+  el('customWRow').style.display=vScale==='custom'?'block':'none';
+});
+el('fpsGroup').addEventListener('click',e=>{
+  const b=e.target.closest('.tog');if(!b)return;
+  tog('fpsGroup',b);vFps=b.dataset.fps;
+  el('customFpsRow').style.display=vFps==='custom'?'block':'none';
+});
+el('qualModeGroup').addEventListener('click',e=>{
+  const b=e.target.closest('.tog');if(!b)return;
+  tog('qualModeGroup',b);vQualMode=b.dataset.mode;
+  el('crfCtrl').style.display=vQualMode==='crf'?'block':'none';
+  el('bitrateCtrl').style.display=vQualMode==='bitrate'?'block':'none';
+});
+el('abrGroup').addEventListener('click',e=>{
+  const b=e.target.closest('.tog');if(!b)return;
+  tog('abrGroup',b);vAbr=b.dataset.abr;
+});
+el('crfSlider').addEventListener('input',()=>{el('crfVal').textContent=el('crfSlider').value;});
+el('vbrSlider').addEventListener('input',()=>{el('vbrVal').textContent=el('vbrSlider').value+' kbps';});
+
+el('videoGoBtn').addEventListener('click',async()=>{
+  if(!videoFile||!ffmpegReady)return;
+  el('videoErr').classList.remove('on');
+  el('videoResult').classList.remove('on');
+  el('videoProgCard').style.display='block';
+  el('videoLog').innerHTML='';
+  el('videoProg').style.width='0%';el('videoProgLbl').textContent='0%';
+  el('videoGoBtn').disabled=true;
+
+  try{
+    const inName='input.'+(videoFile.name.split('.').pop()||'mp4');
+    await ffmpeg.writeFile(inName,await fetchFile(videoFile));
+
+    const args=['-i',inName];
+
+    // scale
+    const vid=el('viThumb').querySelector('video');
+    const ow=vid?vid.videoWidth:0, oh=vid?vid.videoHeight:0;
+    let sf='';
+    if(vScale==='custom'){
+      const cw=parseInt(el('customW').value);
+      if(cw)sf=`scale=${cw}:-2`;
+    } else {
+      const s=parseFloat(vScale);
+      if(s!==1.0&&ow){sf=`scale=${Math.round(ow*s/2)*2}:-2`;}
+    }
+    if(sf)args.push('-vf',sf);
+
+    // fps
+    if(vFps==='custom'){const cf=parseInt(el('customFps').value);if(cf)args.push('-r',cf+'');}
+    else if(vFps!=='original')args.push('-r',vFps);
+
+    // quality
+    if(vQualMode==='crf'){args.push('-c:v','libx264','-crf',el('crfSlider').value,'-preset','fast');}
+    else{args.push('-c:v','libx264','-b:v',el('vbrSlider').value+'k','-preset','fast');}
+
+    args.push('-c:a','aac','-b:a',vAbr+'k','-movflags','+faststart','output.mp4');
+    appendVideoLog('ffmpeg '+args.join(' '));
+
+    await ffmpeg.exec(args);
+    el('videoProg').style.width='100%';el('videoProgLbl').textContent='100% — klaar!';
+
+    const data=await ffmpeg.readFile('output.mp4');
+    videoResultBlob=new Blob([data.buffer],{type:'video/mp4'});
+
+    el('vOrigSz').textContent=fmt(videoFile.size);
+    el('vNewSz').textContent=fmt(videoResultBlob.size);
+    el('vOrigInfo').textContent=vid?`${vid.videoWidth}×${vid.videoHeight} · ${vid.duration.toFixed(1)}s`:'';
+    const pct=((videoResultBlob.size-videoFile.size)/videoFile.size*100);
+    const sv=el('vSaving');
+    sv.textContent=pct<0?`↓ ${Math.abs(pct).toFixed(0)}% kleiner`:`↑ ${pct.toFixed(0)}% groter`;
+    sv.className='saving '+(pct<0?'better':'worse');
+    el('videoResult').classList.add('on');
+    el('videoProgCard').style.display='none';
+  } catch(e){
+    el('videoErr').textContent='Fout: '+e.message;el('videoErr').classList.add('on');
+    el('videoProgCard').style.display='none';
+  }
+  el('videoGoBtn').disabled=false;
+});
+
+el('videoDlBtn').addEventListener('click',()=>{
+  if(!videoResultBlob)return;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(videoResultBlob);
+  a.download=(videoFile.name.replace(/\.[^.]+$/,'')||'video')+'_compressed.mp4';
+  a.click();
+});
 </script>
 </body>
 </html>
