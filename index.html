@@ -3,673 +3,562 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Media Resizer</title>
+<title>Video Compressor</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Cabinet+Grotesk:wght@400;700;800;900&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070709;--s1:#0f0f14;--s2:#161620;--border:#1e1e2a;
+  --accent:#00e5ff;--accent-dim:rgba(0,229,255,.12);
+  --warn:#ffb800;--ok:#00ff9d;--err:#ff4466;
+  --text:#e8e8f0;--muted:#44445a;--mono:'IBM Plex Mono',monospace;
+  --sans:'Cabinet Grotesk',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 16px 72px;}
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* header */
+.hd{text-align:center;margin-bottom:44px;}
+.hd h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:900;letter-spacing:-.04em;line-height:1;margin-bottom:8px;}
+.hd h1 em{font-style:normal;color:var(--accent);}
+.hd p{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;}
 
-  :root {
-    --bg: #0d0d0f;
-    --surface: #16161a;
-    --border: #2a2a32;
-    --accent: #e8ff47;
-    --accent2: #ff6b35;
-    --text: #f0f0f0;
-    --muted: #666;
-    --success: #47ffb0;
-    --error: #ff4757;
-  }
+/* cards */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:620px;margin-bottom:14px;}
+.card-title{font-family:var(--mono);font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card-title::before{content:'';display:block;width:6px;height:6px;border-radius:50%;background:var(--accent);}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 20px 60px;
-  }
+/* drop zone */
+.drop{border:1px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative;}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-dim);}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
+.drop-ico{font-size:2rem;margin-bottom:10px;}
+.drop h3{font-size:1rem;font-weight:800;margin-bottom:4px;}
+.drop small{font-family:var(--mono);color:var(--muted);font-size:.68rem;}
 
-  h1 {
-    font-size: clamp(2rem, 6vw, 3.5rem);
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    line-height: 1;
-    margin-bottom: 8px;
-  }
-  h1 span { color: var(--accent); }
+/* file preview */
+.frow{display:none;align-items:center;gap:14px;margin-top:14px;padding:14px;background:var(--s2);border-radius:10px;border:1px solid var(--border);}
+.frow.on{display:flex;}
+.fthumb{width:54px;height:54px;border-radius:8px;background:#1a1a24;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;}
+.fthumb video{width:100%;height:100%;object-fit:cover;border-radius:8px;}
+.fmeta{flex:1;min-width:0;}
+.fname{font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.finfo-line{font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-top:4px;}
+.rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;flex-shrink:0;padding:4px;transition:color .2s;}
+.rm:hover{color:var(--err);}
 
-  .subtitle {
-    font-family: 'DM Mono', monospace;
-    color: var(--muted);
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 48px;
-  }
+/* control rows */
+.ctrl-row{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+.ctrl-row:last-child{margin-bottom:0;}
+.ctrl-label{font-family:var(--mono);font-size:.68rem;color:var(--muted);min-width:90px;flex-shrink:0;}
+.ctrl-right{flex:1;display:flex;flex-direction:column;gap:6px;}
 
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 32px;
-    width: 100%;
-    max-width: 640px;
-    margin-bottom: 24px;
-  }
+/* slider */
+.sl-wrap{display:flex;align-items:center;gap:12px;}
+input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:var(--border);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 3px rgba(0,229,255,.15);}
+.sl-num{font-family:var(--mono);font-size:.95rem;font-weight:600;color:var(--accent);min-width:72px;text-align:right;}
+.sl-hint{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.58rem;color:var(--muted);}
 
-  .drop-zone {
-    border: 2px dashed var(--border);
-    border-radius: 12px;
-    padding: 48px 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    position: relative;
-  }
-  .drop-zone:hover, .drop-zone.drag-over {
-    border-color: var(--accent);
-    background: rgba(232,255,71,0.04);
-  }
-  .drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
-  .drop-icon { font-size: 2.5rem; margin-bottom: 12px; }
-  .drop-zone h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
-  .drop-zone p { font-family: 'DM Mono', monospace; color: var(--muted); font-size: 0.75rem; }
+/* toggle group */
+.tog-group{display:flex;gap:6px;flex-wrap:wrap;}
+.tog{font-family:var(--mono);font-size:.7rem;padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .18s;}
+.tog:hover{border-color:var(--accent);color:var(--text);}
+.tog.on{border-color:var(--accent);background:var(--accent-dim);color:var(--accent);}
+.tog.disabled-opt{opacity:.35;cursor:not-allowed;}
 
-  .file-info {
-    margin-top: 20px;
-    display: none;
-    align-items: center;
-    gap: 16px;
-    padding: 16px;
-    background: rgba(255,255,255,0.03);
-    border-radius: 10px;
-    border: 1px solid var(--border);
-  }
-  .file-info.visible { display: flex; }
-  .file-thumb {
-    width: 56px; height: 56px;
-    border-radius: 8px;
-    object-fit: cover;
-    background: #222;
-    flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem;
-    overflow: hidden;
-  }
-  .file-thumb img, .file-thumb video { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
-  .file-meta { flex: 1; min-width: 0; }
-  .file-name { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .file-size { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
-  .remove-btn {
-    background: none; border: none; color: var(--muted); cursor: pointer;
-    font-size: 1.2rem; padding: 4px; transition: color 0.2s;
-    flex-shrink: 0;
-  }
-  .remove-btn:hover { color: var(--error); }
+/* custom number input */
+.num-input{font-family:var(--mono);font-size:.85rem;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);width:90px;outline:none;transition:border-color .2s;}
+.num-input:focus{border-color:var(--accent);}
 
-  .section-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 12px;
-  }
+/* divider */
+.divider{height:1px;background:var(--border);margin:6px 0 18px;}
 
-  .mb-control {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-  .mb-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px; background: var(--border); outline: none; cursor: pointer; }
-  .mb-slider::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 20px; height: 20px; border-radius: 50%;
-    background: var(--accent); cursor: pointer;
-    box-shadow: 0 0 0 3px rgba(232,255,71,0.2);
-    transition: box-shadow 0.2s;
-  }
-  .mb-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 6px rgba(232,255,71,0.2); }
-  .mb-display {
-    font-family: 'DM Mono', monospace;
-    font-size: 1.2rem;
-    font-weight: 500;
-    color: var(--accent);
-    min-width: 70px;
-    text-align: right;
-  }
+/* status badge */
+.status-row{display:flex;align-items:center;gap:10px;margin-top:14px;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.status-dot.ok{background:var(--ok);}
+.status-dot.warn{background:var(--warn);}
+.status-text{font-family:var(--mono);font-size:.68rem;color:var(--muted);}
 
-  .presets {
-    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px;
-  }
-  .preset-btn {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.72rem;
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.05em;
-  }
-  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* go button */
+.go-btn{width:100%;max-width:620px;padding:18px;border-radius:12px;border:none;background:var(--accent);color:#000;font-family:var(--sans);font-weight:900;font-size:1rem;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:transform .15s,box-shadow .15s,opacity .2s;margin-bottom:14px;}
+.go-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,229,255,.25);}
+.go-btn:disabled{opacity:.3;cursor:not-allowed;}
 
-  .quality-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 8px;
-  }
-  .quality-opt {
-    padding: 14px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
-  }
-  .quality-opt:hover { border-color: var(--accent); }
-  .quality-opt.active { border-color: var(--accent); background: rgba(232,255,71,0.06); }
-  .quality-opt .q-label { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; }
-  .quality-opt .q-desc { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--muted); }
+/* progress */
+.prog-card{display:none;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:22px 24px;width:100%;max-width:620px;margin-bottom:14px;}
+.prog-card.on{display:block;}
+.prog-title{font-family:var(--mono);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.log-box{font-family:var(--mono);font-size:.68rem;color:var(--muted);line-height:1.9;max-height:90px;overflow-y:auto;margin-bottom:14px;word-break:break-all;}
+.bar-bg{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px;}
+.bar-fill{height:100%;background:var(--accent);border-radius:2px;width:0;transition:width .4s;}
+.bar-label{font-family:var(--mono);font-size:.66rem;color:var(--muted);}
 
-  .convert-btn {
-    width: 100%;
-    padding: 18px;
-    border-radius: 12px;
-    border: none;
-    background: var(--accent);
-    color: #000;
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1rem;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
-    text-transform: uppercase;
-  }
-  .convert-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(232,255,71,0.25); }
-  .convert-btn:active:not(:disabled) { transform: translateY(0); }
-  .convert-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+/* result */
+.result-card{display:none;background:var(--s1);border:1px solid var(--ok);border-radius:14px;padding:24px;width:100%;max-width:620px;margin-bottom:14px;}
+.result-card.on{display:block;}
+.rh{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.rh-ico{font-size:1.4rem;}
+.rh-title{font-size:1rem;font-weight:800;color:var(--ok);}
+.compare{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.sz-box{flex:1;padding:13px;background:var(--s2);border-radius:8px;border:1px solid var(--border);}
+.sz-lbl{font-family:var(--mono);font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;}
+.sz-val{font-size:1.15rem;font-weight:800;}
+.badge{font-family:var(--mono);font-size:.7rem;padding:6px 12px;background:rgba(0,255,157,.07);color:var(--ok);border-radius:6px;border:1px solid rgba(0,255,157,.2);white-space:nowrap;}
+.dl-btn{width:100%;padding:14px;border-radius:10px;border:1px solid var(--ok);background:rgba(0,255,157,.06);color:var(--ok);font-family:var(--sans);font-weight:700;font-size:.9rem;cursor:pointer;transition:background .2s;text-transform:uppercase;letter-spacing:.05em;}
+.dl-btn:hover{background:rgba(0,255,157,.12);}
 
-  .progress-wrap { margin-top: 24px; display: none; }
-  .progress-wrap.visible { display: block; }
-  .progress-bar-bg { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
-  .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; width: 0%; transition: width 0.3s; }
-  .progress-status { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); }
+/* error */
+.err-msg{display:none;background:rgba(255,68,102,.07);border:1px solid rgba(255,68,102,.25);color:var(--err);border-radius:10px;padding:12px 16px;font-family:var(--mono);font-size:.72rem;margin-top:12px;line-height:1.7;}
+.err-msg.on{display:block;}
 
-  .result-card {
-    display: none;
-    background: var(--surface);
-    border: 1px solid var(--success);
-    border-radius: 16px;
-    padding: 28px 32px;
-    width: 100%;
-    max-width: 640px;
-    margin-bottom: 24px;
-  }
-  .result-card.visible { display: block; }
-  .result-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-  .result-icon { font-size: 1.5rem; }
-  .result-title { font-size: 1.1rem; font-weight: 800; color: var(--success); }
-  .size-compare { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-  .size-box { flex: 1; padding: 14px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--border); }
-  .size-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
-  .size-val { font-size: 1.3rem; font-weight: 800; }
-  .arrow { color: var(--muted); font-size: 1.2rem; }
-  .saving-badge { font-family: 'DM Mono', monospace; font-size: 0.78rem; padding: 6px 12px; background: rgba(71,255,176,0.1); color: var(--success); border-radius: 6px; border: 1px solid rgba(71,255,176,0.2); }
-  .download-btn {
-    width: 100%;
-    padding: 16px;
-    border-radius: 12px;
-    border: 1px solid var(--success);
-    background: rgba(71,255,176,0.08);
-    color: var(--success);
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-  .download-btn:hover { background: rgba(71,255,176,0.15); }
+.note{font-family:var(--mono);font-size:.63rem;color:var(--muted);text-align:center;max-width:500px;line-height:1.9;margin-top:8px;}
 
-  .error-msg {
-    display: none;
-    background: rgba(255,71,87,0.1);
-    border: 1px solid rgba(255,71,87,0.3);
-    color: var(--error);
-    border-radius: 10px;
-    padding: 14px 18px;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.8rem;
-    margin-top: 16px;
-  }
-  .error-msg.visible { display: block; }
-
-  .note {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.68rem;
-    color: var(--muted);
-    text-align: center;
-    max-width: 520px;
-    line-height: 1.7;
-    margin-top: 8px;
-  }
+/* ffmpeg loading state */
+.ffmpeg-status{font-family:var(--mono);font-size:.68rem;color:var(--muted);text-align:center;padding:6px 0 12px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.spinner{width:10px;height:10px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
-<h1>Media<span>Resizer</span></h1>
-<p class="subtitle">Foto's & video's — doelgrootte in MB</p>
+<div class="hd">
+  <h1>Video<em>Comp</em></h1>
+  <p>Resolutie · FPS · Bitrate · volledig instelbaar</p>
+</div>
 
+<!-- Upload -->
 <div class="card">
-  <p class="section-label">Bestand</p>
-  <div class="drop-zone" id="dropZone">
-    <input type="file" id="fileInput" accept="image/*,video/*">
-    <div class="drop-icon">📁</div>
-    <h3>Klik of sleep een bestand</h3>
-    <p>Foto: JPG, PNG, WEBP, GIF &nbsp;·&nbsp; Video: MP4, WEBM, MOV</p>
+  <div class="card-title">Bestand</div>
+  <div class="drop" id="drop">
+    <input type="file" id="fileInput" accept="video/*">
+    <div class="drop-ico">🎬</div>
+    <h3>Sleep of klik om een video te laden</h3>
+    <small>MP4 · MOV · WEBM · MKV · AVI · schermopnames</small>
   </div>
-  <div class="file-info" id="fileInfo">
-    <div class="file-thumb" id="fileThumbnail"></div>
-    <div class="file-meta">
-      <div class="file-name" id="fileName"></div>
-      <div class="file-size" id="fileSize"></div>
+  <div class="frow" id="frow">
+    <div class="fthumb" id="fthumb"></div>
+    <div class="fmeta">
+      <div class="fname" id="fname">—</div>
+      <div class="finfo-line" id="finfo">—</div>
     </div>
-    <button class="remove-btn" id="removeBtn" title="Verwijder">✕</button>
+    <button class="rm" id="rmBtn">✕</button>
   </div>
+  <div class="err-msg" id="errMsg"></div>
 </div>
 
+<!-- Resolutie -->
 <div class="card">
-  <p class="section-label">Doelgrootte</p>
-  <div class="mb-control">
-    <input type="range" class="mb-slider" id="mbSlider" min="0.1" max="50" step="0.1" value="2">
-    <div class="mb-display" id="mbDisplay">2.0 MB</div>
-  </div>
-  <div class="presets">
-    <button class="preset-btn" data-mb="0.5">0.5 MB</button>
-    <button class="preset-btn" data-mb="1">1 MB</button>
-    <button class="preset-btn" data-mb="2">2 MB</button>
-    <button class="preset-btn" data-mb="5">5 MB</button>
-    <button class="preset-btn" data-mb="10">10 MB</button>
-    <button class="preset-btn" data-mb="25">25 MB</button>
-  </div>
-
-  <p class="section-label" id="qualityLabel">Kwaliteit (foto)</p>
-  <div class="quality-row" id="qualityRow">
-    <div class="quality-opt" data-q="high">
-      <div class="q-label">Hoog</div>
-      <div class="q-desc">Beste kwaliteit</div>
-    </div>
-    <div class="quality-opt active" data-q="balanced">
-      <div class="q-label">Gebalanceerd</div>
-      <div class="q-desc">Kwaliteit + grootte</div>
+  <div class="card-title">Resolutie</div>
+  <div class="ctrl-row">
+    <div class="ctrl-label">Schaling</div>
+    <div class="ctrl-right">
+      <div class="tog-group" id="scaleGroup">
+        <button class="tog on" data-scale="1.0">100%</button>
+        <button class="tog" data-scale="0.75">75%</button>
+        <button class="tog" data-scale="0.5">50%</button>
+        <button class="tog" data-scale="0.25">25%</button>
+        <button class="tog" data-scale="custom">Handmatig</button>
+      </div>
     </div>
   </div>
-
-  <div id="errorMsg" class="error-msg"></div>
-
-  <div class="progress-wrap" id="progressWrap">
-    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
-    <div class="progress-status" id="progressStatus">Bezig...</div>
+  <div id="customResRow" style="display:none;" class="ctrl-row">
+    <div class="ctrl-label">Breedte (px)</div>
+    <div class="ctrl-right">
+      <div style="display:flex;gap:10px;align-items:center;">
+        <input type="number" class="num-input" id="customW" placeholder="1280" min="64" max="7680" step="2">
+        <span style="font-family:var(--mono);color:var(--muted);font-size:.75rem;">× hoogte auto</span>
+      </div>
+    </div>
+  </div>
+  <div class="status-row" id="resStatus">
+    <div class="status-dot" id="resDot"></div>
+    <div class="status-text" id="resText">Laad een video om resolutie te zien</div>
   </div>
 </div>
 
-<div style="width:100%;max-width:640px;margin-bottom:24px;">
-  <button class="convert-btn" id="convertBtn" disabled>Verklein / Vergroot bestand</button>
+<!-- FPS -->
+<div class="card">
+  <div class="card-title">Framerate (FPS)</div>
+  <div class="ctrl-row">
+    <div class="ctrl-label">FPS preset</div>
+    <div class="ctrl-right">
+      <div class="tog-group" id="fpsGroup">
+        <button class="tog on" data-fps="original">Origineel</button>
+        <button class="tog" data-fps="60">60 fps</button>
+        <button class="tog" data-fps="30">30 fps</button>
+        <button class="tog" data-fps="24">24 fps</button>
+        <button class="tog" data-fps="15">15 fps</button>
+        <button class="tog" data-fps="custom">Handmatig</button>
+      </div>
+    </div>
+  </div>
+  <div id="customFpsRow" style="display:none;" class="ctrl-row">
+    <div class="ctrl-label">FPS waarde</div>
+    <div class="ctrl-right">
+      <input type="number" class="num-input" id="customFps" placeholder="25" min="1" max="120" step="1">
+    </div>
+  </div>
 </div>
 
+<!-- Bitrate / Kwaliteit -->
+<div class="card">
+  <div class="card-title">Video kwaliteit</div>
+
+  <div class="ctrl-row">
+    <div class="ctrl-label">Modus</div>
+    <div class="ctrl-right">
+      <div class="tog-group" id="qualModeGroup">
+        <button class="tog on" data-mode="crf">CRF (aanbevolen)</button>
+        <button class="tog" data-mode="bitrate">Vaste bitrate</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- CRF mode -->
+  <div id="crfSection">
+    <div class="ctrl-row">
+      <div class="ctrl-label">CRF waarde</div>
+      <div class="ctrl-right">
+        <div class="sl-wrap">
+          <input type="range" id="crfSlider" min="15" max="40" step="1" value="23">
+          <div class="sl-num" id="crfVal">23</div>
+        </div>
+        <div class="sl-hint"><span>← Beste kwaliteit (grotere file)</span><span>Kleinste file →</span></div>
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-dot" id="crfDot"></div>
+      <div class="status-text" id="crfText">CRF 23 — standaard H.264, nauwelijks zichtbaar verschil</div>
+    </div>
+  </div>
+
+  <!-- Bitrate mode -->
+  <div id="bitrateSection" style="display:none;">
+    <div class="ctrl-row">
+      <div class="ctrl-label">Video (kbps)</div>
+      <div class="ctrl-right">
+        <div class="sl-wrap">
+          <input type="range" id="vbrSlider" min="200" max="12000" step="100" value="2000">
+          <div class="sl-num" id="vbrVal">2000 kbps</div>
+        </div>
+        <div class="sl-hint"><span>← Lager (kleine file)</span><span>Hoger (betere kwaliteit) →</span></div>
+      </div>
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Audio (kbps)</div>
+      <div class="ctrl-right">
+        <div class="tog-group" id="abrGroup">
+          <button class="tog" data-abr="64">64</button>
+          <button class="tog on" data-abr="128">128</button>
+          <button class="tog" data-abr="192">192</button>
+          <button class="tog" data-abr="320">320</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Go -->
+<button class="go-btn" id="goBtn" disabled>▶ Video comprimeren</button>
+
+<!-- Progress -->
+<div class="prog-card" id="progCard">
+  <div class="prog-title">Verwerken met FFmpeg</div>
+  <div class="log-box" id="logBox">Laden...</div>
+  <div class="bar-bg"><div class="bar-fill" id="barFill"></div></div>
+  <div class="bar-label" id="barLabel">0%</div>
+</div>
+
+<!-- Result -->
 <div class="result-card" id="resultCard">
-  <div class="result-header">
-    <span class="result-icon">✅</span>
-    <span class="result-title">Klaar!</span>
+  <div class="rh"><span class="rh-ico">✅</span><span class="rh-title">Klaar!</span></div>
+  <div class="compare">
+    <div class="sz-box"><div class="sz-lbl">Origineel</div><div class="sz-val" id="origSz">—</div></div>
+    <span style="color:var(--muted);font-size:1.2rem;">→</span>
+    <div class="sz-box"><div class="sz-lbl">Resultaat</div><div class="sz-val" id="newSz">—</div></div>
+    <div class="badge" id="saveBadge"></div>
   </div>
-  <div class="size-compare">
-    <div class="size-box">
-      <div class="size-label">Origineel</div>
-      <div class="size-val" id="origSize">—</div>
-    </div>
-    <div class="arrow">→</div>
-    <div class="size-box">
-      <div class="size-label">Resultaat</div>
-      <div class="size-val" id="newSize">—</div>
-    </div>
-    <div class="saving-badge" id="savingBadge"></div>
-  </div>
-  <button class="download-btn" id="downloadBtn">⬇ Download</button>
+  <button class="dl-btn" id="dlBtn">⬇ Download MP4</button>
 </div>
 
-<p class="note">Alles wordt lokaal verwerkt in je browser — er wordt niets geüpload naar een server.</p>
+<p class="note">Alles wordt lokaal verwerkt via FFmpeg WebAssembly — er wordt niets geüpload.</p>
 
-<script>
-const fileInput = document.getElementById('fileInput');
-const dropZone = document.getElementById('dropZone');
-const fileInfo = document.getElementById('fileInfo');
-const fileThumbnail = document.getElementById('fileThumbnail');
-const fileName = document.getElementById('fileName');
-const fileSize = document.getElementById('fileSize');
-const removeBtn = document.getElementById('removeBtn');
-const mbSlider = document.getElementById('mbSlider');
-const mbDisplay = document.getElementById('mbDisplay');
-const convertBtn = document.getElementById('convertBtn');
-const progressWrap = document.getElementById('progressWrap');
-const progressFill = document.getElementById('progressFill');
-const progressStatus = document.getElementById('progressStatus');
-const resultCard = document.getElementById('resultCard');
-const origSize = document.getElementById('origSize');
-const newSize = document.getElementById('newSize');
-const savingBadge = document.getElementById('savingBadge');
-const downloadBtn = document.getElementById('downloadBtn');
-const errorMsg = document.getElementById('errorMsg');
-const qualityRow = document.getElementById('qualityRow');
+<script type="module">
+import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
+import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
 
-let currentFile = null;
-let selectedQuality = 'balanced';
+// ── state ──────────────────────────────────────────────────────
+let ffmpeg = null, ffmpegReady = false;
+let currentFile = null, videoDuration = 0;
+let selectedScale = '1.0', selectedFps = 'original', qualMode = 'crf', selectedAbr = '128';
 let resultBlob = null;
-let resultFilename = '';
 
-function formatMB(bytes) {
-  const mb = bytes / (1024 * 1024);
+// ── element refs ───────────────────────────────────────────────
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
+const frow = document.getElementById('frow');
+const fthumb = document.getElementById('fthumb');
+const fname = document.getElementById('fname');
+const finfo = document.getElementById('finfo');
+const rmBtn = document.getElementById('rmBtn');
+const errMsg = document.getElementById('errMsg');
+const resText = document.getElementById('resText');
+const resDot = document.getElementById('resDot');
+const crfSlider = document.getElementById('crfSlider');
+const crfVal = document.getElementById('crfVal');
+const crfDot = document.getElementById('crfDot');
+const crfText = document.getElementById('crfText');
+const vbrSlider = document.getElementById('vbrSlider');
+const vbrVal = document.getElementById('vbrVal');
+const goBtn = document.getElementById('goBtn');
+const progCard = document.getElementById('progCard');
+const logBox = document.getElementById('logBox');
+const barFill = document.getElementById('barFill');
+const barLabel = document.getElementById('barLabel');
+const resultCard = document.getElementById('resultCard');
+const origSz = document.getElementById('origSz');
+const newSz = document.getElementById('newSz');
+const saveBadge = document.getElementById('saveBadge');
+const dlBtn = document.getElementById('dlBtn');
+const customResRow = document.getElementById('customResRow');
+const customFpsRow = document.getElementById('customFpsRow');
+const crfSection = document.getElementById('crfSection');
+const bitrateSection = document.getElementById('bitrateSection');
+
+// ── FFmpeg init ────────────────────────────────────────────────
+async function initFFmpeg() {
+  ffmpeg = new FFmpeg();
+  ffmpeg.on('log', ({ message }) => appendLog(message));
+  ffmpeg.on('progress', ({ progress, time }) => {
+    const pct = Math.min(99, Math.round(progress * 100));
+    barFill.style.width = pct + '%';
+    barLabel.textContent = pct + '% ' + (videoDuration > 0 ? `(${(time/1000000).toFixed(1)}s / ${videoDuration.toFixed(1)}s)` : '');
+  });
+  const base = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+  await ffmpeg.load({
+    coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
+    wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
+  });
+  ffmpegReady = true;
+  if (currentFile) goBtn.disabled = false;
+}
+
+function appendLog(msg) {
+  const line = document.createElement('div');
+  line.textContent = msg;
+  logBox.appendChild(line);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+initFFmpeg().catch(e => showErr('FFmpeg kon niet laden: ' + e.message));
+
+// ── drop / file ────────────────────────────────────────────────
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+rmBtn.addEventListener('click', clearFile);
+
+function fmt(bytes) {
+  const mb = bytes / 1048576;
   return mb >= 0.1 ? mb.toFixed(2) + ' MB' : (bytes / 1024).toFixed(0) + ' KB';
 }
 
-mbSlider.addEventListener('input', () => {
-  const v = parseFloat(mbSlider.value);
-  mbDisplay.textContent = v.toFixed(v < 1 ? 1 : 1) + ' MB';
-});
-
-document.querySelectorAll('.preset-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const mb = parseFloat(btn.dataset.mb);
-    mbSlider.value = mb;
-    mbDisplay.textContent = mb.toFixed(mb < 1 ? 1 : 1) + ' MB';
-  });
-});
-
-qualityRow.querySelectorAll('.quality-opt').forEach(opt => {
-  opt.addEventListener('click', () => {
-    qualityRow.querySelectorAll('.quality-opt').forEach(o => o.classList.remove('active'));
-    opt.classList.add('active');
-    selectedQuality = opt.dataset.q;
-  });
-});
-
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
-removeBtn.addEventListener('click', clearFile);
-
 function loadFile(file) {
   currentFile = file;
-  fileName.textContent = file.name;
-  fileSize.textContent = formatMB(file.size) + ' — ' + file.type;
-  fileInfo.classList.add('visible');
-  convertBtn.disabled = false;
-  resultCard.classList.remove('visible');
-  errorMsg.classList.remove('visible');
-  fileThumbnail.innerHTML = '';
-
-  const isVideo = file.type.startsWith('video/');
-  qualityRow.style.display = isVideo ? 'none' : '';
-  document.getElementById('qualityLabel').style.display = isVideo ? 'none' : '';
-
-  if (isVideo) {
-    const vid = document.createElement('video');
-    vid.src = URL.createObjectURL(file);
-    fileThumbnail.appendChild(vid);
-  } else {
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
-    fileThumbnail.appendChild(img);
-  }
+  fthumb.innerHTML = '';
+  const vid = document.createElement('video');
+  vid.src = URL.createObjectURL(file);
+  vid.muted = true;
+  vid.preload = 'metadata';
+  fthumb.appendChild(vid);
+  vid.onloadedmetadata = () => {
+    videoDuration = vid.duration;
+    const w = vid.videoWidth, h = vid.videoHeight;
+    finfo.textContent = `${fmt(file.size)} · ${w}×${h} · ${vid.duration.toFixed(1)}s`;
+    updateResStatus(w, h);
+  };
+  fname.textContent = file.name;
+  frow.classList.add('on');
+  resultCard.classList.remove('on');
+  errMsg.classList.remove('on');
+  if (ffmpegReady) goBtn.disabled = false;
 }
 
 function clearFile() {
-  currentFile = null;
-  fileInfo.classList.remove('visible');
-  fileThumbnail.innerHTML = '';
-  convertBtn.disabled = true;
-  resultCard.classList.remove('visible');
-  fileInput.value = '';
+  currentFile = null; frow.classList.remove('on');
+  fthumb.innerHTML = ''; fname.textContent = '—'; finfo.textContent = '—';
+  goBtn.disabled = true; fileInput.value = '';
+  resultCard.classList.remove('on'); errMsg.classList.remove('on');
+  resText.textContent = 'Laad een video om resolutie te zien'; resDot.className = 'status-dot';
 }
 
-function showError(msg) {
-  errorMsg.textContent = msg;
-  errorMsg.classList.add('visible');
-  progressWrap.classList.remove('visible');
-  convertBtn.disabled = false;
-}
-
-function setProgress(pct, status) {
-  progressFill.style.width = pct + '%';
-  progressStatus.textContent = status;
-}
-
-convertBtn.addEventListener('click', async () => {
-  if (!currentFile) return;
-  errorMsg.classList.remove('visible');
-  resultCard.classList.remove('visible');
-  progressWrap.classList.add('visible');
-  convertBtn.disabled = true;
-  resultBlob = null;
-
-  const targetBytes = parseFloat(mbSlider.value) * 1024 * 1024;
-
-  if (currentFile.type.startsWith('image/')) {
-    await resizeImage(currentFile, targetBytes);
-  } else if (currentFile.type.startsWith('video/')) {
-    await resizeVideo(currentFile, targetBytes);
-  } else {
-    showError('Bestandstype niet ondersteund.');
+// ── resolution toggles ─────────────────────────────────────────
+document.getElementById('scaleGroup').addEventListener('click', e => {
+  const btn = e.target.closest('.tog'); if (!btn) return;
+  document.querySelectorAll('#scaleGroup .tog').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  selectedScale = btn.dataset.scale;
+  customResRow.style.display = selectedScale === 'custom' ? 'flex' : 'none';
+  if (currentFile) {
+    const vid = fthumb.querySelector('video');
+    if (vid && vid.videoWidth) updateResStatus(vid.videoWidth, vid.videoHeight);
   }
 });
 
-async function resizeImage(file, targetBytes) {
-  setProgress(10, 'Afbeelding laden...');
-  const img = new Image();
-  const url = URL.createObjectURL(file);
-  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-
-  setProgress(30, 'Grootte berekenen...');
-
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-
-  let quality = selectedQuality === 'high' ? 0.92 : 0.82;
-  let scale = 1.0;
-
-  // Binary search voor kwaliteit
-  const mimeType = file.type === 'image/png' ? 'image/jpeg' : file.type;
-  const ext = mimeType === 'image/jpeg' ? 'jpg' : mimeType.split('/')[1];
-
-  let lo = 0.1, hi = 1.0, bestBlob = null;
-  setProgress(40, 'Grootte optimaliseren...');
-
-  // First check if at full size + max quality it fits
-  canvas.width = img.width; canvas.height = img.height;
-  ctx.drawImage(img, 0, 0);
-  const fullBlob = await canvasToBlob(canvas, mimeType, 0.95);
-
-  if (fullBlob.size <= targetBytes) {
-    // Image is already smaller — just re-export at high quality
-    bestBlob = fullBlob;
-    setProgress(80, 'Bestand is al kleiner, hoge kwaliteit behouden...');
+function updateResStatus(w, h) {
+  let tw, th;
+  if (selectedScale === 'custom') {
+    const cw = parseInt(document.getElementById('customW').value);
+    if (cw) { tw = cw; th = Math.round(h * (cw / w) / 2) * 2; }
+    else { resText.textContent = 'Vul een breedte in'; resDot.className = 'status-dot warn'; return; }
   } else {
-    // Need to compress — try quality first
-    for (let i = 0; i < 12; i++) {
-      const mid = (lo + hi) / 2;
-      canvas.width = img.width; canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      const blob = await canvasToBlob(canvas, mimeType, mid);
-      if (blob.size <= targetBytes) { lo = mid; bestBlob = blob; }
-      else hi = mid;
-      setProgress(40 + i * 3, `Kwaliteit aanpassen (${(mid * 100).toFixed(0)}%)...`);
-    }
-
-    // If quality didn't get us there, also scale dimensions
-    if (!bestBlob || bestBlob.size > targetBytes) {
-      let scaleLo = 0.1, scaleHi = 1.0, bestScaleBlob = null;
-      for (let i = 0; i < 10; i++) {
-        const s = (scaleLo + scaleHi) / 2;
-        canvas.width = Math.round(img.width * s);
-        canvas.height = Math.round(img.height * s);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const blob = await canvasToBlob(canvas, mimeType, 0.7);
-        if (blob.size <= targetBytes) { scaleLo = s; bestScaleBlob = blob; }
-        else scaleHi = s;
-        setProgress(76 + i, `Afmeting aanpassen (${(s * 100).toFixed(0)}%)...`);
-      }
-      if (bestScaleBlob) bestBlob = bestScaleBlob;
-    }
+    const s = parseFloat(selectedScale);
+    tw = Math.round(w * s / 2) * 2; th = Math.round(h * s / 2) * 2;
   }
-
-  if (!bestBlob) { showError('Kan bestand niet klein genoeg maken. Probeer een grotere doelgrootte.'); return; }
-
-  setProgress(100, 'Klaar!');
-  resultFilename = file.name.replace(/\.[^.]+$/, '') + '_resized.' + ext;
-  showResult(file, bestBlob, resultFilename);
+  resText.textContent = `${w}×${h} → ${tw}×${th}`;
+  resDot.className = 'status-dot ' + (tw === w ? '' : 'ok');
 }
 
-function canvasToBlob(canvas, type, quality) {
-  return new Promise(res => canvas.toBlob(res, type, quality));
-}
+document.getElementById('customW').addEventListener('input', () => {
+  if (currentFile) { const v = fthumb.querySelector('video'); if (v && v.videoWidth) updateResStatus(v.videoWidth, v.videoHeight); }
+});
 
-async function resizeVideo(file, targetBytes) {
-  setProgress(10, 'Video laden...');
+// ── FPS toggles ────────────────────────────────────────────────
+document.getElementById('fpsGroup').addEventListener('click', e => {
+  const btn = e.target.closest('.tog'); if (!btn) return;
+  document.querySelectorAll('#fpsGroup .tog').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  selectedFps = btn.dataset.fps;
+  customFpsRow.style.display = selectedFps === 'custom' ? 'flex' : 'none';
+});
 
-  // Check MediaRecorder + canvas support
-  if (!window.MediaRecorder) {
-    showError('Video compressie wordt niet ondersteund in deze browser. Probeer Chrome of Edge.');
-    return;
-  }
+// ── quality mode ───────────────────────────────────────────────
+document.getElementById('qualModeGroup').addEventListener('click', e => {
+  const btn = e.target.closest('.tog'); if (!btn) return;
+  document.querySelectorAll('#qualModeGroup .tog').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  qualMode = btn.dataset.mode;
+  crfSection.style.display = qualMode === 'crf' ? 'block' : 'none';
+  bitrateSection.style.display = qualMode === 'bitrate' ? 'block' : 'none';
+});
 
-  const videoEl = document.createElement('video');
-  videoEl.src = URL.createObjectURL(file);
-  videoEl.muted = true;
+// ── CRF slider ─────────────────────────────────────────────────
+crfSlider.addEventListener('input', () => {
+  const v = parseInt(crfSlider.value); crfVal.textContent = v;
+  if (v <= 20) { crfDot.className = 'status-dot ok'; crfText.textContent = `CRF ${v} — hoge kwaliteit, grotere file`; }
+  else if (v <= 26) { crfDot.className = 'status-dot ok'; crfText.textContent = `CRF ${v} — goed evenwicht, nauwelijks zichtbaar verschil`; }
+  else if (v <= 32) { crfDot.className = 'status-dot warn'; crfText.textContent = `CRF ${v} — lichte compressie zichtbaar, kleine file`; }
+  else { crfDot.className = 'status-dot'; crfText.textContent = `CRF ${v} — sterke compressie, duidelijk zichtbaar`; }
+});
 
-  await new Promise((res, rej) => {
-    videoEl.onloadedmetadata = res;
-    videoEl.onerror = rej;
-  });
+// ── VBR slider ─────────────────────────────────────────────────
+vbrSlider.addEventListener('input', () => { vbrVal.textContent = parseInt(vbrSlider.value) + ' kbps'; });
 
-  const duration = videoEl.duration;
-  const origMB = file.size / (1024 * 1024);
-  const targetMB = targetBytes / (1024 * 1024);
-  const ratio = targetMB / origMB;
+// ── audio bitrate ──────────────────────────────────────────────
+document.getElementById('abrGroup').addEventListener('click', e => {
+  const btn = e.target.closest('.tog'); if (!btn) return;
+  document.querySelectorAll('#abrGroup .tog').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on'); selectedAbr = btn.dataset.abr;
+});
 
-  // Determine target dimensions
-  const origW = videoEl.videoWidth;
-  const origH = videoEl.videoHeight;
-  let scale = Math.min(1.0, Math.sqrt(ratio * 1.2)); // slightly over-scale to account for codec efficiency
-  let targetW = Math.max(160, Math.round(origW * scale / 2) * 2);
-  let targetH = Math.max(90, Math.round(origH * scale / 2) * 2);
+// ── convert ────────────────────────────────────────────────────
+goBtn.addEventListener('click', async () => {
+  if (!currentFile || !ffmpegReady) return;
+  errMsg.classList.remove('on');
+  resultCard.classList.remove('on');
+  progCard.classList.add('on');
+  logBox.innerHTML = '';
+  barFill.style.width = '0%'; barLabel.textContent = '0%';
+  goBtn.disabled = true;
 
-  setProgress(20, `Video verwerken (${targetW}×${targetH})...`);
-
-  const canvas = document.createElement('canvas');
-  canvas.width = targetW; canvas.height = targetH;
-  const ctx = canvas.getContext('2d');
-
-  // Determine best mime type
-  const mimes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
-  let chosenMime = mimes.find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
-
-  const targetBitsPerSec = Math.floor((targetBytes * 8) / duration * 0.85);
-
-  const stream = canvas.captureStream(30);
-
-  // Add audio if available
-  let audioCtx, sourceNode, destNode;
   try {
-    audioCtx = new AudioContext();
-    const arrayBuffer = await file.arrayBuffer();
-    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-    sourceNode = audioCtx.createBufferSource();
-    sourceNode.buffer = audioBuffer;
-    destNode = audioCtx.createMediaStreamDestination();
-    sourceNode.connect(destNode);
-    destNode.stream.getAudioTracks().forEach(t => stream.addTrack(t));
-  } catch(e) { /* no audio or decode error */ }
+    const inName = 'input.' + (currentFile.name.split('.').pop() || 'mp4');
+    const outName = 'output.mp4';
 
-  const recorder = new MediaRecorder(stream, { mimeType: chosenMime, videoBitsPerSecond: targetBitsPerSec });
-  const chunks = [];
-  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    appendLog('Bestand inladen...');
+    await ffmpeg.writeFile(inName, await fetchFile(currentFile));
 
-  recorder.start(100);
-  videoEl.currentTime = 0;
-  await new Promise(res => { videoEl.onseeked = res; });
+    // build ffmpeg args
+    const args = ['-i', inName];
 
-  if (sourceNode) sourceNode.start(0);
-  videoEl.play();
+    // scale
+    let scaleFilter = '';
+    const vid = fthumb.querySelector('video');
+    const origW = vid ? vid.videoWidth : 0;
+    const origH = vid ? vid.videoHeight : 0;
 
-  await new Promise(resolve => {
-    const draw = () => {
-      if (videoEl.ended || videoEl.currentTime >= duration - 0.05) {
-        ctx.drawImage(videoEl, 0, 0, targetW, targetH);
-        resolve();
-        return;
+    if (selectedScale === 'custom') {
+      const cw = parseInt(document.getElementById('customW').value);
+      if (cw) scaleFilter = `scale=${cw}:-2`;
+    } else {
+      const s = parseFloat(selectedScale);
+      if (s !== 1.0 && origW) {
+        const tw = Math.round(origW * s / 2) * 2;
+        scaleFilter = `scale=${tw}:-2`;
       }
-      ctx.drawImage(videoEl, 0, 0, targetW, targetH);
-      const pct = 20 + Math.round((videoEl.currentTime / duration) * 70);
-      setProgress(pct, `Verwerken ${(videoEl.currentTime).toFixed(1)}s / ${duration.toFixed(1)}s...`);
-      requestAnimationFrame(draw);
-    };
-    videoEl.onended = resolve;
-    requestAnimationFrame(draw);
-  });
+    }
 
-  recorder.stop();
-  if (audioCtx) audioCtx.close();
+    if (scaleFilter) args.push('-vf', scaleFilter);
 
-  await new Promise(res => { recorder.onstop = res; });
-  setProgress(95, 'Bestand samenstellen...');
+    // fps
+    if (selectedFps === 'custom') {
+      const cf = parseInt(document.getElementById('customFps').value);
+      if (cf) args.push('-r', cf.toString());
+    } else if (selectedFps !== 'original') {
+      args.push('-r', selectedFps);
+    }
 
-  const ext = chosenMime.includes('mp4') ? 'mp4' : 'webm';
-  const blob = new Blob(chunks, { type: chosenMime });
-  resultFilename = file.name.replace(/\.[^.]+$/, '') + '_resized.' + ext;
-  setProgress(100, 'Klaar!');
-  showResult(file, blob, resultFilename);
-}
+    // quality
+    if (qualMode === 'crf') {
+      args.push('-c:v', 'libx264', '-crf', crfSlider.value, '-preset', 'fast');
+    } else {
+      args.push('-c:v', 'libx264', '-b:v', vbrSlider.value + 'k', '-preset', 'fast');
+    }
 
-function showResult(origFile, blob, filename) {
-  resultBlob = blob;
-  origSize.textContent = formatMB(origFile.size);
-  newSize.textContent = formatMB(blob.size);
+    // audio
+    args.push('-c:a', 'aac', '-b:a', selectedAbr + 'k');
+    args.push('-movflags', '+faststart');
+    args.push(outName);
 
-  const diff = ((blob.size - origFile.size) / origFile.size * 100);
-  if (diff < 0) {
-    savingBadge.textContent = `↓ ${Math.abs(diff).toFixed(0)}% kleiner`;
-    savingBadge.style.color = 'var(--success)';
-  } else {
-    savingBadge.textContent = `↑ ${diff.toFixed(0)}% groter`;
-    savingBadge.style.color = 'var(--accent2)';
+    appendLog('FFmpeg args: ' + args.join(' '));
+    appendLog('Verwerken...');
+
+    await ffmpeg.exec(args);
+
+    barFill.style.width = '100%'; barLabel.textContent = '100%';
+    appendLog('Klaar!');
+
+    const data = await ffmpeg.readFile(outName);
+    resultBlob = new Blob([data.buffer], { type: 'video/mp4' });
+
+    origSz.textContent = fmt(currentFile.size);
+    newSz.textContent = fmt(resultBlob.size);
+    const pct = ((resultBlob.size - currentFile.size) / currentFile.size * 100);
+    saveBadge.textContent = pct < 0 ? `↓ ${Math.abs(pct).toFixed(0)}% kleiner` : `↑ ${pct.toFixed(0)}% groter`;
+    saveBadge.style.color = pct < 0 ? 'var(--ok)' : 'var(--warn)';
+
+    resultCard.classList.add('on');
+    progCard.classList.remove('on');
+  } catch(e) {
+    showErr('Fout: ' + e.message);
+    progCard.classList.remove('on');
   }
+  goBtn.disabled = false;
+});
 
-  resultCard.classList.add('visible');
-  progressWrap.classList.remove('visible');
-  convertBtn.disabled = false;
-}
-
-downloadBtn.addEventListener('click', () => {
+dlBtn.addEventListener('click', () => {
   if (!resultBlob) return;
   const a = document.createElement('a');
   a.href = URL.createObjectURL(resultBlob);
-  a.download = resultFilename;
+  a.download = (currentFile?.name.replace(/\.[^.]+$/, '') || 'video') + '_compressed.mp4';
   a.click();
 });
+
+function showErr(msg) { errMsg.textContent = msg; errMsg.classList.add('on'); goBtn.disabled = false; }
 </script>
 </body>
 </html>
