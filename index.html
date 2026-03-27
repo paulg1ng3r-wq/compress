@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MediaPress</title>
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Mono:ital,wght@0,400;0,600;1,400&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap');
 
@@ -146,6 +147,30 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
 .note{font-family:var(--mono);font-size:.62rem;color:var(--muted);text-align:center;max-width:500px;line-height:1.9;margin-top:10px;}
 .hidden{display:none!important;}
+
+/* ── bestanden / zip ── */
+.file-list{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+.file-row{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--s2);border-radius:9px;border:1px solid var(--border);transition:border-color .15s;}
+.file-row:hover{border-color:var(--border2);}
+.file-ico{font-size:1.3rem;flex-shrink:0;width:28px;text-align:center;}
+.file-info{flex:1;min-width:0;}
+.file-nm{font-weight:700;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.file-sz{font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:2px;}
+.file-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9rem;padding:4px;transition:color .15s;flex-shrink:0;}
+.file-del:hover{color:var(--red);}
+.zip-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+.zstat{padding:13px;background:var(--s2);border-radius:9px;border:1px solid var(--border);text-align:center;}
+.zstat-lbl{font-family:var(--mono);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;}
+.zstat-val{font-size:1.05rem;font-weight:800;}
+.zstat-val.green{color:var(--green);}
+.zstat-val.accent{color:var(--accent);}
+.zip-progress{margin-bottom:14px;}
+.zip-file-prog{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-family:var(--mono);font-size:.68rem;color:var(--muted);}
+.zip-file-prog span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mini-bar-bg{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.mini-bar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s;}
+.drop-multi input{pointer-events:all;}
+
 </style>
 </head>
 <body>
@@ -159,6 +184,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 <div class="tabs">
   <div class="tab active" id="tabPhoto" onclick="switchTab('photo')">📷 Foto</div>
   <div class="tab" id="tabVideo" onclick="switchTab('video')">🎬 Video</div>
+  <div class="tab" id="tabFiles" onclick="switchTab('files')">📦 Bestanden</div>
 </div>
 
 <div class="main">
@@ -392,6 +418,78 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
 </div><!-- /videoSection -->
 
+<!-- ═══════════════════ BESTANDEN / ZIP SECTIE ═══════════════════ -->
+<div id="filesSection" class="hidden">
+
+  <div class="card">
+    <div class="card-title"><span class="pip"></span>Bestanden toevoegen</div>
+    <div class="drop drop-multi" id="zipDrop">
+      <input type="file" id="zipInput" multiple>
+      <div class="drop-ico">📂</div>
+      <h3>Sleep meerdere bestanden hierheen</h3>
+      <small>Elk bestandstype · meerdere tegelijk · max compressie</small>
+    </div>
+    <div class="file-list" id="fileList" style="margin-top:14px;"></div>
+    <div class="err" id="zipErr"></div>
+  </div>
+
+  <div class="card" id="zipSettingsCard" style="display:none;">
+    <div class="card-title"><span class="pip"></span>Compressie instellingen</div>
+    <div class="ctrls">
+      <div class="ctrl">
+        <div class="ctrl-lbl">Niveau</div>
+        <div class="ctrl-body">
+          <div class="tog-row" id="zipLevelGroup">
+            <button class="tog" data-level="1">Snel</button>
+            <button class="tog on" data-level="6">Normaal</button>
+            <button class="tog" data-level="9">Maximum</button>
+          </div>
+          <div style="font-family:var(--mono);font-size:.6rem;color:var(--muted);margin-top:7px;" id="zipLevelHint">Niveau 6 — goede balans tussen snelheid en compressie</div>
+        </div>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-lbl">Bestandsnaam</div>
+        <div class="ctrl-body">
+          <input type="text" class="num-in" id="zipName" placeholder="archief" style="width:180px;">
+          <span style="font-family:var(--mono);font-size:.62rem;color:var(--muted);margin-left:6px;">.zip</span>
+        </div>
+      </div>
+    </div>
+    <!-- totaal overzicht -->
+    <div style="margin-top:18px;">
+      <div class="card-title" style="margin-bottom:10px;"><span class="pip"></span>Bestanden overzicht</div>
+      <div class="zip-stats">
+        <div class="zstat"><div class="zstat-lbl">Bestanden</div><div class="zstat-val accent" id="zCountVal">0</div></div>
+        <div class="zstat"><div class="zstat-lbl">Totaal origineel</div><div class="zstat-val" id="zOrigVal">—</div></div>
+        <div class="zstat"><div class="zstat-lbl">Geschatte besparing</div><div class="zstat-val green" id="zEstVal">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="go-btn hidden" id="zipGoBtn">📦 ZIP maken &amp; downloaden</button>
+
+  <!-- progress -->
+  <div class="card" id="zipProgCard" style="display:none;">
+    <div class="card-title"><span class="pip"></span>Comprimeren...</div>
+    <div id="zipFileProgs"></div>
+    <div class="prog-bg" style="margin-top:4px;"><div class="prog-fill" id="zipProg"></div></div>
+    <div class="prog-lbl" style="margin-top:8px;" id="zipProgLbl">Bezig...</div>
+  </div>
+
+  <!-- result -->
+  <div class="result-card" id="zipResult">
+    <div class="result-head"><span>✅</span><span class="result-title">ZIP klaar!</span></div>
+    <div class="compare-row">
+      <div class="cmp-box"><div class="cmp-lbl">Origineel totaal</div><div class="cmp-val" id="zrOrig">—</div><div class="cmp-sub" id="zrOrigFiles">—</div></div>
+      <span class="cmp-arrow">→</span>
+      <div class="cmp-box"><div class="cmp-lbl">ZIP grootte</div><div class="cmp-val" id="zrNew">—</div><div class="cmp-sub" id="zrRatio">—</div></div>
+      <div class="saving" id="zrSaving"></div>
+    </div>
+    <button class="dl-btn" id="zipDlBtn">⬇ Download ZIP</button>
+  </div>
+
+</div><!-- /filesSection -->
+
 </div><!-- /main -->
 
 <p class="note">Alles verwerkt lokaal in je browser — er wordt niets geüpload.</p>
@@ -413,8 +511,10 @@ function tog(groupId, activeBtn){
 window.switchTab = (tab) => {
   el('photoSection').classList.toggle('hidden', tab!=='photo');
   el('videoSection').classList.toggle('hidden', tab!=='video');
+  el('filesSection').classList.toggle('hidden', tab!=='files');
   el('tabPhoto').classList.toggle('active', tab==='photo');
   el('tabVideo').classList.toggle('active', tab==='video');
+  el('tabFiles').classList.toggle('active', tab==='files');
 };
 
 // ──────────────────────────────────────────────
@@ -714,6 +814,198 @@ el('videoDlBtn').addEventListener('click',()=>{
   a.download=(videoFile.name.replace(/\.[^.]+$/,'')||'video')+'_compressed.mp4';
   a.click();
 });
+
+// ──────────────────────────────────────────────
+// BESTANDEN / ZIP — fflate
+// ──────────────────────────────────────────────
+let zipFiles = []; // [{file, id}]
+let zipLevel = 6;
+let zipResultBlob = null;
+
+const zipDrop = el('zipDrop'), zipInput = el('zipInput');
+
+zipDrop.addEventListener('dragover', e => { e.preventDefault(); zipDrop.classList.add('over'); });
+zipDrop.addEventListener('dragleave', () => zipDrop.classList.remove('over'));
+zipDrop.addEventListener('drop', e => {
+  e.preventDefault(); zipDrop.classList.remove('over');
+  addZipFiles(Array.from(e.dataTransfer.files));
+});
+zipInput.addEventListener('change', () => { addZipFiles(Array.from(zipInput.files)); zipInput.value=''; });
+
+function fileIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  const map = {
+    pdf:'📄', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📑', pptx:'📑',
+    zip:'📦', rar:'📦', '7z':'📦', tar:'📦', gz:'📦',
+    jpg:'🖼️', jpeg:'🖼️', png:'🖼️', gif:'🖼️', webp:'🖼️', svg:'🖼️',
+    mp4:'🎬', mov:'🎬', avi:'🎬', mkv:'🎬', webm:'🎬',
+    mp3:'🎵', wav:'🎵', flac:'🎵', aac:'🎵',
+    js:'⚙️', ts:'⚙️', html:'🌐', css:'🎨', json:'📋', py:'🐍', txt:'📋', csv:'📋',
+    exe:'💾', dmg:'💾', apk:'📱',
+  };
+  return map[ext] || '📁';
+}
+
+// estimate compression ratio by file type
+function estimateRatio(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  // already compressed formats — little gain
+  const noGain = ['zip','rar','7z','gz','tar','bz2','xz','jpg','jpeg','png','gif','webp','mp4','mov','avi','mkv','webm','mp3','aac','flac','wav','ogg','m4a'];
+  if (noGain.includes(ext)) return 0.97; // ~3% at best
+  // highly compressible
+  const highGain = ['txt','csv','json','xml','html','css','js','ts','log','svg','sql','md'];
+  if (highGain.includes(ext)) return 0.30; // ~70% reduction
+  // medium
+  return 0.55;
+}
+
+function addZipFiles(files) {
+  files.forEach(f => {
+    if (zipFiles.find(z => z.file.name === f.name && z.file.size === f.size)) return; // dedup
+    zipFiles.push({ file: f, id: Math.random().toString(36).slice(2) });
+  });
+  renderFileList();
+}
+
+function removeZipFile(id) {
+  zipFiles = zipFiles.filter(z => z.id !== id);
+  renderFileList();
+}
+
+function renderFileList() {
+  const list = el('fileList'); list.innerHTML = '';
+  if (zipFiles.length === 0) {
+    el('zipSettingsCard').style.display = 'none';
+    el('zipGoBtn').classList.add('hidden');
+    return;
+  }
+  el('zipSettingsCard').style.display = 'block';
+  el('zipGoBtn').classList.remove('hidden');
+
+  let totalOrig = 0, totalEst = 0;
+  zipFiles.forEach(z => {
+    totalOrig += z.file.size;
+    totalEst += z.file.size * estimateRatio(z.file.name);
+    const row = document.createElement('div');
+    row.className = 'file-row';
+    row.innerHTML = `
+      <div class="file-ico">${fileIcon(z.file.name)}</div>
+      <div class="file-info">
+        <div class="file-nm">${z.file.name}</div>
+        <div class="file-sz">${fmt(z.file.size)} · ${z.file.name.split('.').pop().toUpperCase()}</div>
+      </div>
+      <button class="file-del" title="Verwijderen">✕</button>`;
+    row.querySelector('.file-del').addEventListener('click', () => removeZipFile(z.id));
+    list.appendChild(row);
+  });
+
+  el('zCountVal').textContent = zipFiles.length;
+  el('zOrigVal').textContent = fmt(totalOrig);
+  const saving = Math.max(0, totalOrig - totalEst);
+  const pct = Math.round((saving / totalOrig) * 100);
+  el('zEstVal').textContent = pct > 3 ? `~${pct}% kleiner` : 'Weinig (al gecomprimeerd)';
+}
+
+// level toggles
+el('zipLevelGroup').addEventListener('click', e => {
+  const b = e.target.closest('.tog'); if (!b) return;
+  tog('zipLevelGroup', b);
+  zipLevel = parseInt(b.dataset.level);
+  const hints = { 1:'Niveau 1 — supersnel, minder compressie', 6:'Niveau 6 — goede balans tussen snelheid en compressie', 9:'Niveau 9 — maximale compressie, duurt langer' };
+  el('zipLevelHint').textContent = hints[zipLevel];
+});
+
+// zip + download
+el('zipGoBtn').addEventListener('click', async () => {
+  if (zipFiles.length === 0) return;
+  el('zipResult').classList.remove('on');
+  el('zipProgCard').style.display = 'block';
+  el('zipGoBtn').disabled = true;
+  el('zipErr').classList.remove('on');
+
+  const progContainer = el('zipFileProgs');
+  progContainer.innerHTML = '';
+  el('zipProg').style.width = '0%';
+  el('zipProgLbl').textContent = 'Bestanden inlezen...';
+
+  try {
+    // fflate is loaded via UMD script tag — available as window.fflate
+    const { zipSync, strToU8 } = window.fflate;
+
+    // Build the files object for fflate
+    const zipObj = {};
+    let totalOrig = 0;
+
+    for (let i = 0; i < zipFiles.length; i++) {
+      const { file } = zipFiles[i];
+      totalOrig += file.size;
+
+      // show per-file progress row
+      const rowId = 'zfp_' + i;
+      const row = document.createElement('div');
+      row.className = 'zip-file-prog';
+      row.id = rowId;
+      row.innerHTML = `<span>${fileIcon(file.name)} ${file.name}</span><div class="mini-bar-bg"><div class="mini-bar-fill" style="width:0%"></div></div><span style="min-width:38px;text-align:right">${fmt(file.size)}</span>`;
+      progContainer.appendChild(row);
+
+      const pct = Math.round(((i) / zipFiles.length) * 80);
+      el('zipProg').style.width = pct + '%';
+      el('zipProgLbl').textContent = `Inlezen ${i+1}/${zipFiles.length}...`;
+
+      const buf = await file.arrayBuffer();
+      const u8 = new Uint8Array(buf);
+
+      // fflate options: level 1-9, mem for level 9 needs more memory
+      zipObj[file.name] = [u8, { level: zipLevel }];
+
+      // animate the mini bar
+      row.querySelector('.mini-bar-fill').style.width = '100%';
+    }
+
+    el('zipProgLbl').textContent = 'Comprimeren...';
+    el('zipProg').style.width = '85%';
+
+    // synchronous zip (runs in same thread, fast enough for browser)
+    // For very large files this could block UI briefly
+    const zipped = zipSync(zipObj);
+
+    el('zipProg').style.width = '100%';
+    el('zipProgLbl').textContent = 'Klaar!';
+
+    zipResultBlob = new Blob([zipped], { type: 'application/zip' });
+
+    // results
+    const pct = ((zipResultBlob.size - totalOrig) / totalOrig * 100);
+    el('zrOrig').textContent = fmt(totalOrig);
+    el('zrNew').textContent = fmt(zipResultBlob.size);
+    el('zrOrigFiles').textContent = `${zipFiles.length} bestand${zipFiles.length !== 1 ? 'en' : ''}`;
+    el('zrRatio').textContent = `Compressie niveau ${zipLevel}`;
+    const sv = el('zrSaving');
+    sv.textContent = pct < 0 ? `↓ ${Math.abs(pct).toFixed(0)}% kleiner` : `↑ ${pct.toFixed(0)}% groter`;
+    sv.className = 'saving ' + (pct < 0 ? 'better' : 'worse');
+
+    el('zipResult').classList.add('on');
+    el('zipProgCard').style.display = 'none';
+    el('zipResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  } catch(e) {
+    el('zipErr').textContent = 'Fout: ' + e.message;
+    el('zipErr').classList.add('on');
+    el('zipProgCard').style.display = 'none';
+  }
+
+  el('zipGoBtn').disabled = false;
+});
+
+el('zipDlBtn').addEventListener('click', () => {
+  if (!zipResultBlob) return;
+  const name = (el('zipName').value.trim() || 'archief') + '.zip';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(zipResultBlob);
+  a.download = name;
+  a.click();
+});
+
 </script>
 </body>
 </html>
